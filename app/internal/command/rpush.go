@@ -8,11 +8,10 @@ import (
 )
 
 func (h *Handler) handleRpushCommand(writer *bufio.Writer, args []string) error {
-	if len(args) != 3 {
+	if !(len(args) > 2) {
 		return errors.New("invalid command")
 	}
-
-	resInt := h.store.PushList(args[1], args[2])
+	resInt := h.store.PushList(args[1], args[2:])
 	writer.Write([]byte(utils.SerializeInt(resInt)))
 	writer.Flush()
 	return nil

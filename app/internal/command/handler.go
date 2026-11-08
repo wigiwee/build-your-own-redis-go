@@ -69,5 +69,5 @@ type Store interface {
 	Set(key, value string, ttl time.Duration)
 	Get(key string) (string, bool)
 	Delete(key string) bool
-	PushList(listName, value string) int
+	PushList(listName string, value []string) int
 }

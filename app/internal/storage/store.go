@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -65,20 +66,20 @@ func (s *Store) Delete(key string) bool {
 	return true
 }
 
-func (s *Store) PushList(listName, value string) int {
+func (s *Store) PushList(listName string, values []string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
+	fmt.Println(values)
 	entry, doesExist := s.data[listName]
 	if doesExist {
-		entry.List = append(entry.List, value)
+		entry.List = append(entry.List, values...)
 		s.data[listName] = entry
 		return len(s.data[listName].List)
 	}
 	newEntry := Entry{
 		Type: utils.TYPE_LIST,
-		List: []string{value},
+		List: values,
 	}
 	s.data[listName] = newEntry
-	return 1
+	return len(values)
 }
