@@ -8,7 +8,17 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
-func HandleCommand(writer *bufio.Writer, args []string) {
+type Handler struct {
+	store Store
+}
+
+func NewHandler(store Store) *Handler {
+	return &Handler{
+		store: store,
+	}
+}
+
+func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 
 	if len(args) == 0 {
 		log.Fatal("empty args received")
@@ -17,15 +27,28 @@ func HandleCommand(writer *bufio.Writer, args []string) {
 	switch strings.ToUpper(args[0]) {
 
 	case "PING":
-		err := handlePingCommand(writer, args)
+		err := h.handlePingCommand(writer, args)
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
 	case "ECHO":
-		err := handleEchoCommand(writer, args)
+		err := h.handleEchoCommand(writer, args)
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "GET":
+		err := h.handleGetCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
+	case "SET":
+		err := h.handleSetCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
+	default:
+		WriteError(writer, "Unknown Command")
+
 	}
 
 }
@@ -34,4 +57,10 @@ func WriteError(writer *bufio.Writer, errorStr string) {
 	_, err := writer.Write([]byte(utils.BasicError(errorStr)))
 	writer.Flush()
 	log.Println(err)
+}
+
+type Store interface {
+	Set(key, value string)
+	Get(key string) (string, bool)
+	Delete(key string) bool
 }

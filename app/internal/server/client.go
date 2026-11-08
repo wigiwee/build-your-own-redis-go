@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
@@ -29,6 +28,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 		writer := bufio.NewWriter(conn)
 
 		log.Println("processing command ", args)
-		command.HandleCommand(writer, args)
+		s.Handler.HandleCommand(writer, args)
 	}
 }

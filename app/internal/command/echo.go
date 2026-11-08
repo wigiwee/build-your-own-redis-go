@@ -8,7 +8,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
-func handleEchoCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleEchoCommand(writer *bufio.Writer, args []string) error {
 	if len(args) != 2 {
 		return errors.New("invalid input")
 	}

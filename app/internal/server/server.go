@@ -2,13 +2,18 @@ package server
 
 import (
 	"net"
+
+	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 )
 
 type Server struct {
+	Handler command.Handler
 }
 
-func NewServer() Server {
-	return Server{}
+func NewServer(handler command.Handler) Server {
+	return Server{
+		Handler: handler,
+	}
 }
 
 func (s *Server) Start(addr string) error {
