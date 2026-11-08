@@ -140,3 +140,18 @@ func (s *Store) GetListLen(listName string) int {
 		return len(entry.List)
 	}
 }
+
+func (s *Store) LPop(listName string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, doesExist := s.data[listName]
+
+	if !doesExist && len(entry.List) == 0 {
+		return ""
+	}
+	popValue := entry.List[0]
+	entry.List = entry.List[1:]
+	s.data[listName] = entry
+	return popValue
+}
