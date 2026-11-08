@@ -47,6 +47,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "RPUSH":
+		err := h.handleRpushCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 	default:
 		WriteError(writer, "Unknown Command")
 
@@ -64,4 +69,5 @@ type Store interface {
 	Set(key, value string, ttl time.Duration)
 	Get(key string) (string, bool)
 	Delete(key string) bool
+	PushList(listName, value string) int
 }

@@ -10,6 +10,15 @@ import (
 	"unicode"
 )
 
+func SerializeInt(num int) string {
+	return ":" + strconv.Itoa(num) + CRLF
+}
+func DeserializeInt(str string) (int, error) {
+	if str[0] != ':' || len(str) < 4 {
+		return 0, errors.New("Invalid resp int")
+	}
+	return strconv.Atoi(str[1 : len(str)-2])
+}
 func SerializeString(str string) (string, error) {
 	if len(str) == 0 {
 		return "", errors.New("null string passed")

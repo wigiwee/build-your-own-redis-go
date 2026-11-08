@@ -3,6 +3,8 @@ package storage
 import (
 	"sync"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
 type Store struct {
@@ -11,6 +13,8 @@ type Store struct {
 }
 
 type Entry struct {
+	Type      string
+	List      []string
 	Value     string
 	ExpiresAt time.Time
 }
@@ -25,6 +29,7 @@ func (s *Store) Set(key, value string, ttl time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entry := Entry{
+		Type:  utils.TYPE_STRING,
 		Value: value,
 	}
 	if ttl > 0 {
@@ -39,7 +44,7 @@ func (s *Store) Get(key string) (string, bool) {
 
 	entry, exists := s.data[key]
 
-	if !exists {
+	if !exists && entry.Type == utils.TYPE_STRING {
 		return "", false
 	}
 	if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
@@ -58,4 +63,22 @@ func (s *Store) Delete(key string) bool {
 	}
 	delete(s.data, key)
 	return true
+}
+
+func (s *Store) PushList(listName, value string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, doesExist := s.data[listName]
+	if doesExist {
+		entry.List = append(entry.List, value)
+		s.data[listName] = entry
+		return len(s.data[listName].List)
+	}
+	newEntry := Entry{
+		Type: utils.TYPE_LIST,
+		List: []string{value},
+	}
+	s.data[listName] = newEntry
+	return 1
 }
