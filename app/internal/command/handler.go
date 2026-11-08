@@ -62,6 +62,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "LLEN":
+		err := h.handleLlenCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 	default:
 		WriteError(writer, "Unknown Command")
 
@@ -81,6 +86,7 @@ type Store interface {
 	Delete(key string) bool
 	RPushList(listName string, values []string) int
 	LPushList(listName string, values []string) int
+	GetListLen(listName string) int
 
 	GetListRange(listName string, start, stop int) []string
 }

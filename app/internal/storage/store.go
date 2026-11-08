@@ -128,3 +128,15 @@ func (s *Store) LPushList(listName string, values []string) int {
 	return len(values)
 
 }
+
+func (s *Store) GetListLen(listName string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entry, doesExist := s.data[listName]
+	if !doesExist {
+		return 0
+	} else {
+		return len(entry.List)
+	}
+}
