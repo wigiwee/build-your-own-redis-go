@@ -1,18 +1,17 @@
 package server
 
 import (
-	"log"
 	"net"
 )
 
-type server struct {
+type Server struct {
 }
 
-func NewServer() server {
-	return server{}
+func NewServer() Server {
+	return Server{}
 }
 
-func (s *server) Start(addr string) error {
+func (s *Server) Start(addr string) error {
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -28,21 +27,4 @@ func (s *server) Start(addr string) error {
 		}
 		go s.handleConnection(conn)
 	}
-}
-
-func (s *server) handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	buf := make([]byte, 1024)
-
-	for {
-		_, err := conn.Read(buf)
-		if err != nil {
-			log.Println(err)
-			break
-		}
-		conn.Write([]byte("+PONG\r\n"))
-		log.Println("PONGed it")
-	}
-
 }
