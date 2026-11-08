@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -69,7 +68,7 @@ func (s *Store) Delete(key string) bool {
 func (s *Store) PushList(listName string, values []string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	fmt.Println(values)
+
 	entry, doesExist := s.data[listName]
 	if doesExist {
 		entry.List = append(entry.List, values...)
@@ -82,4 +81,23 @@ func (s *Store) PushList(listName string, values []string) int {
 	}
 	s.data[listName] = newEntry
 	return len(values)
+}
+
+func (s *Store) GetListRange(listName string, start, stop int) []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	entry, doesExist := s.data[listName]
+	if !doesExist && start > len(entry.List) && start > stop {
+		return []string{}
+	}
+
+	if stop >= len(entry.List) {
+		stop = len(entry.List) - 1
+	}
+	if start < 0 {
+		start = 0
+	}
+
+	return entry.List[start : stop+1]
+
 }

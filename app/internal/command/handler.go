@@ -52,6 +52,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "LRANGE":
+		err := h.handleLrangeCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 	default:
 		WriteError(writer, "Unknown Command")
 
@@ -70,4 +75,5 @@ type Store interface {
 	Get(key string) (string, bool)
 	Delete(key string) bool
 	PushList(listName string, value []string) int
+	GetListRange(listName string, start, stop int) []string
 }
