@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -66,7 +66,7 @@ func (s *Store) Delete(key string) bool {
 	return true
 }
 
-func (s *Store) PushList(listName string, values []string) int {
+func (s *Store) RPushList(listName string, values []string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -87,10 +87,7 @@ func (s *Store) PushList(listName string, values []string) int {
 func (s *Store) GetListRange(listName string, start, stop int) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	fmt.Println(start)
-	fmt.Println(stop)
 	entry, doesExist := s.data[listName]
-	fmt.Println(len(entry.List))
 	if start < 0 {
 		start = len(entry.List) + start
 	}
@@ -100,8 +97,6 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 	if start < 0 {
 		start = 0
 	}
-	fmt.Println(start)
-	fmt.Println(stop)
 
 	if !doesExist && start > len(entry.List) && start > stop {
 		return []string{}
@@ -110,8 +105,26 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 	if stop >= len(entry.List) {
 		stop = len(entry.List) - 1
 	}
-	fmt.Println(start)
-	fmt.Println(stop)
 
 	return entry.List[start : stop+1]
+}
+
+func (s *Store) LPushList(listName string, values []string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	entry, doesExist := s.data[listName]
+	slices.Reverse(values)
+	if doesExist {
+		entry.List = append(values, entry.List...)
+		s.data[listName] = entry
+		return len(s.data[listName].List)
+	}
+	newEntry := Entry{
+		Type: utils.TYPE_LIST,
+		List: values,
+	}
+	s.data[listName] = newEntry
+	return len(values)
+
 }

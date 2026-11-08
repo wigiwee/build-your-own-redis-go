@@ -52,6 +52,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "LPUSH":
+		err := h.handleLpushCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 	case "LRANGE":
 		err := h.handleLrangeCommand(writer, args)
 		if err != nil {
@@ -74,6 +79,8 @@ type Store interface {
 	Set(key, value string, ttl time.Duration)
 	Get(key string) (string, bool)
 	Delete(key string) bool
-	PushList(listName string, value []string) int
+	RPushList(listName string, values []string) int
+	LPushList(listName string, values []string) int
+
 	GetListRange(listName string, start, stop int) []string
 }

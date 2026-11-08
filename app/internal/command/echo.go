@@ -3,7 +3,6 @@ package command
 import (
 	"bufio"
 	"errors"
-	"log"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
@@ -16,7 +15,6 @@ func (h *Handler) handleEchoCommand(writer *bufio.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("writing ", args[1])
 	_, err = writer.Write([]byte(bulkstr))
 	writer.Flush()
 	return err
