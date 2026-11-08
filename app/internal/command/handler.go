@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
@@ -60,7 +61,7 @@ func WriteError(writer *bufio.Writer, errorStr string) {
 }
 
 type Store interface {
-	Set(key, value string)
+	Set(key, value string, ttl time.Duration)
 	Get(key string) (string, bool)
 	Delete(key string) bool
 }
