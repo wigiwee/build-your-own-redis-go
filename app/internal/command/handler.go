@@ -72,7 +72,7 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
-		
+
 	default:
 		WriteError(writer, "Unknown Command")
 
@@ -93,6 +93,6 @@ type Store interface {
 	RPushList(listName string, values []string) int
 	LPushList(listName string, values []string) int
 	GetListLen(listName string) int
-	LPop(listName string) string
+	LPop(listName string, n int) []string
 	GetListRange(listName string, start, stop int) []string
 }

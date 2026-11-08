@@ -141,17 +141,20 @@ func (s *Store) GetListLen(listName string) int {
 	}
 }
 
-func (s *Store) LPop(listName string) string {
+func (s *Store) LPop(listName string, n int) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	entry, doesExist := s.data[listName]
 
 	if !doesExist && len(entry.List) == 0 {
-		return ""
+		return nil
 	}
-	popValue := entry.List[0]
-	entry.List = entry.List[1:]
+	if n > len(entry.List) {
+		n = len(entry.List)
+	}
+	popValue := entry.List[:n]
+	entry.List = entry.List[n:]
 	s.data[listName] = entry
 	return popValue
 }
