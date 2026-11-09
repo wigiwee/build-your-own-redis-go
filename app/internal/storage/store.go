@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"slices"
+	"log"
 	"sync"
 	"time"
 
@@ -9,24 +9,27 @@ import (
 )
 
 type Store struct {
-	mu   sync.RWMutex
-	data map[string]Entry
+	mu      sync.RWMutex
+	data    map[string]Entry
+	waiters map[string][]*Waiter
 }
 
-type Entry struct {
-	Type      string
-	List      []string
-	Value     string
-	ExpiresAt time.Time
+type Waiter struct {
+	ch       chan []string
+	notified bool
 }
 
 func NewStore() *Store {
-	return &Store{
-		data: make(map[string]Entry),
+	s := &Store{
+		data:    make(map[string]Entry),
+		waiters: make(map[string][]*Waiter),
 	}
+	return s
+
 }
 
 func (s *Store) Set(key, value string, ttl time.Duration) {
+	s.refreshKey(key)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entry := Entry{
@@ -67,21 +70,29 @@ func (s *Store) Delete(key string) bool {
 }
 
 func (s *Store) RPushList(listName string, values []string) int {
+	s.refreshKey(listName)
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	initiallen := len(s.data[listName].List)
+	for _, value := range values {
+		queue := s.waiters[listName]
+		if len(queue) > 0 {
+			queue[0].notified = true
+			queue[0].ch <- []string{listName, value}
+			s.waiters[listName] = s.waiters[listName][1:]
+			continue
+		}
 
-	entry, doesExist := s.data[listName]
-	if doesExist {
-		entry.List = append(entry.List, values...)
+		entry := s.data[listName]
+		entry.Type = utils.TYPE_LIST
+		entry.List = append(entry.List, value)
 		s.data[listName] = entry
-		return len(s.data[listName].List)
 	}
-	newEntry := Entry{
-		Type: utils.TYPE_LIST,
-		List: values,
+	if len(s.waiters[listName]) == 0 {
+		delete(s.waiters, listName)
 	}
-	s.data[listName] = newEntry
-	return len(values)
+
+	return initiallen + len(values)
 }
 
 func (s *Store) GetListRange(listName string, start, stop int) []string {
@@ -110,23 +121,29 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 }
 
 func (s *Store) LPushList(listName string, values []string) int {
+	s.refreshKey(listName)
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	initiallen := len(s.data[listName].List)
 
-	entry, doesExist := s.data[listName]
-	slices.Reverse(values)
-	if doesExist {
-		entry.List = append(values, entry.List...)
+	for _, value := range values {
+		queue := s.waiters[listName]
+		if len(queue) > 0 {
+			queue[0].notified = true
+			queue[0].ch <- []string{listName, value}
+			s.waiters[listName] = s.waiters[listName][1:]
+			continue
+		}
+		entry := s.data[listName]
+		entry.Type = utils.TYPE_LIST
+		entry.List = append([]string{value}, entry.List...)
 		s.data[listName] = entry
-		return len(s.data[listName].List)
 	}
-	newEntry := Entry{
-		Type: utils.TYPE_LIST,
-		List: values,
+	if len(s.waiters[listName]) == 0 {
+		delete(s.waiters, listName)
 	}
-	s.data[listName] = newEntry
-	return len(values)
 
+	return initiallen + len(values)
 }
 
 func (s *Store) GetListLen(listName string) int {
@@ -157,4 +174,120 @@ func (s *Store) LPop(listName string, n int) []string {
 	entry.List = entry.List[n:]
 	s.data[listName] = entry
 	return popValue
+}
+
+/*
+check if there are already elements in the list
+
+	|
+	V
+
+if yes then pop it, if not then add ch to the waiter
+
+	|
+	V
+
+set a timeout timer on ttl
+
+	|
+	V
+
+then using select wait untill either select or rpush sends event through channel
+*/
+func (s *Store) BLPop(listName string, ttl time.Duration) []string {
+	s.mu.Lock()
+
+	if entry, doesExist := s.data[listName]; doesExist && !s.isExpired(entry) && len(entry.List) > 0 {
+		value := entry.List[0]
+		entry.List = entry.List[1:]
+		s.data[listName] = entry
+		s.mu.Unlock()
+		return []string{listName, value}
+	}
+
+	waiter := &Waiter{
+		ch:       make(chan []string, 1),
+		notified: false,
+	}
+	s.waiters[listName] = append(s.waiters[listName], waiter)
+	s.mu.Unlock()
+
+	//case where ttl = 0
+	if ttl <= 0 {
+		result := <-waiter.ch
+		s.removeWaiter(listName, waiter)
+		return result
+	}
+
+	timer := time.NewTimer(ttl)
+	defer timer.Stop()
+
+	select {
+	case result := <-waiter.ch:
+		s.removeWaiter(listName, waiter)
+		return result
+
+	case <-timer.C:
+		s.mu.Lock()
+		if waiter.notified {
+			s.mu.Unlock()
+			return <-waiter.ch
+		}
+		s.removeWaiterLocked(listName, waiter)
+
+		s.mu.Unlock()
+		return nil
+	}
+}
+
+func (s *Store) isExpired(entry Entry) bool {
+	return !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)
+}
+
+func (s *Store) removeWaiter(listName string, waiter *Waiter) {
+	s.mu.Lock()
+	waitersList := s.waiters[listName]
+	idx := -1
+	for i := 0; i < len(waitersList); i++ {
+		if waitersList[i] == waiter {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		s.mu.Unlock()
+		log.Println("fatal you should take a look: BLOP waiter not found when trying to remove the waiter")
+		return
+	}
+	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
+	s.waiters[listName] = waitersList
+	s.mu.Unlock()
+}
+func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
+	waitersList := s.waiters[listName]
+	idx := -1
+	for i := 0; i < len(waitersList); i++ {
+		if waitersList[i] == waiter {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		s.mu.Unlock()
+		log.Println("waiter not found, nothing removed")
+		return
+	}
+	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
+	s.waiters[listName] = waitersList
+}
+
+func (s *Store) refreshKey(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entry := s.data[key]
+	if !entry.ExpiresAt.IsZero() {
+		if time.Now().After(entry.ExpiresAt) {
+			delete(s.data, key)
+		}
+	}
 }

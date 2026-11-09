@@ -75,13 +75,21 @@ func DeserializeBulkString(str string) (string, error) {
 }
 
 func SerializeArray(arr []string) (string, error) {
+	if len(arr) == 0 {
+		return "*0\r\n", nil
+	}
+
+	if arr == nil {
+		return "*-1\r\n", nil
+	}
+
 	output := "*"
 	output += strconv.Itoa(len(arr)) + CRLF
 
 	for _, str := range arr {
 		bulkStr, err := SerializeBulkString(str)
 		if err != nil {
-			return "", errors.New("error during bulk string conversion")
+			return "", err
 		}
 		output += bulkStr
 	}

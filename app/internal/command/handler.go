@@ -72,6 +72,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "BLPOP":
+		err := h.handleBLPopCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 
 	default:
 		WriteError(writer, "Unknown Command")
@@ -94,5 +99,6 @@ type Store interface {
 	LPushList(listName string, values []string) int
 	GetListLen(listName string) int
 	LPop(listName string, n int) []string
+	BLPop(listName string, ttl time.Duration) []string
 	GetListRange(listName string, start, stop int) []string
 }
