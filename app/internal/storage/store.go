@@ -245,7 +245,17 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 		return nil
 	}
 }
+func (s *Store) GetType(key string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
+	entry, doesExist := s.data[key]
+	if !doesExist {
+		return "none"
+	} else {
+		return entry.Type
+	}
+}
 func (s *Store) isExpired(entry Entry) bool {
 	return !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)
 }

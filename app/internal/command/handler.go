@@ -77,6 +77,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "TYPE":
+		err := h.handleTypeCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 
 	default:
 		WriteError(writer, "Unknown Command")
@@ -101,4 +106,5 @@ type Store interface {
 	LPop(listName string, n int) []string
 	BLPop(listName string, ttl time.Duration) []string
 	GetListRange(listName string, start, stop int) []string
+	GetType(key string) string
 }
