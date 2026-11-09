@@ -88,7 +88,7 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 func WriteError(writer *bufio.Writer, errorStr string) {
 	_, err := writer.Write([]byte(utils.BasicError(errorStr)))
 	writer.Flush()
-	log.Println(err)
+	log.Println("error here", err)
 }
 
 type Store interface {

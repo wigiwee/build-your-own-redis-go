@@ -2,6 +2,7 @@ package storage
 
 import (
 	"log"
+	"slices"
 	"sync"
 	"time"
 
@@ -43,11 +44,12 @@ func (s *Store) Set(key, value string, ttl time.Duration) {
 }
 
 func (s *Store) Get(key string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	entry, exists := s.data[key]
 
+	//todo: to be revised
 	if !exists && entry.Type == utils.TYPE_STRING {
 		return "", false
 	}
@@ -73,7 +75,7 @@ func (s *Store) RPushList(listName string, values []string) int {
 	s.refreshKey(listName)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	initiallen := len(s.data[listName].List)
+	initialLen := len(s.data[listName].List)
 	for _, value := range values {
 		queue := s.waiters[listName]
 		if len(queue) > 0 {
@@ -92,7 +94,7 @@ func (s *Store) RPushList(listName string, values []string) int {
 		delete(s.waiters, listName)
 	}
 
-	return initiallen + len(values)
+	return initialLen + len(values)
 }
 
 func (s *Store) GetListRange(listName string, start, stop int) []string {
@@ -109,7 +111,7 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 		start = 0
 	}
 
-	if !doesExist && start > len(entry.List) && start > stop {
+	if !doesExist || start > len(entry.List) && start > stop {
 		return []string{}
 	}
 
@@ -124,26 +126,30 @@ func (s *Store) LPushList(listName string, values []string) int {
 	s.refreshKey(listName)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	initiallen := len(s.data[listName].List)
 
-	for _, value := range values {
-		queue := s.waiters[listName]
-		if len(queue) > 0 {
-			queue[0].notified = true
-			queue[0].ch <- []string{listName, value}
-			s.waiters[listName] = s.waiters[listName][1:]
-			continue
-		}
-		entry := s.data[listName]
-		entry.Type = utils.TYPE_LIST
-		entry.List = append([]string{value}, entry.List...)
-		s.data[listName] = entry
+	values = slices.Clone(values)
+	slices.Reverse(values)
+
+	initialLen := len(s.data[listName].List)
+
+	entry := s.data[listName]
+	entry.Type = utils.TYPE_LIST
+	entry.List = append(values, entry.List...)
+
+	queue := s.waiters[listName]
+	for len(queue) != 0 && len(entry.List) != 0 {
+		queue[0].notified = true
+		queue[0].ch <- []string{listName, entry.List[0]}
+		entry.List = entry.List[1:]
+		queue = queue[1:]
 	}
+	s.waiters[listName] = queue
+	s.data[listName] = entry
 	if len(s.waiters[listName]) == 0 {
 		delete(s.waiters, listName)
 	}
 
-	return initiallen + len(values)
+	return initialLen + len(values)
 }
 
 func (s *Store) GetListLen(listName string) int {
@@ -224,7 +230,7 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 
 	select {
 	case result := <-waiter.ch:
-		s.removeWaiter(listName, waiter)
+		// s.removeWaiter(listName, waiter)
 		return result
 
 	case <-timer.C:
@@ -233,7 +239,7 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 			s.mu.Unlock()
 			return <-waiter.ch
 		}
-		s.removeWaiterLocked(listName, waiter)
+		// s.removeWaiterLocked(listName, waiter)
 
 		s.mu.Unlock()
 		return nil
@@ -262,23 +268,6 @@ func (s *Store) removeWaiter(listName string, waiter *Waiter) {
 	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
 	s.waiters[listName] = waitersList
 	s.mu.Unlock()
-}
-func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
-	waitersList := s.waiters[listName]
-	idx := -1
-	for i := 0; i < len(waitersList); i++ {
-		if waitersList[i] == waiter {
-			idx = i
-			break
-		}
-	}
-	if idx == -1 {
-		s.mu.Unlock()
-		log.Println("waiter not found, nothing removed")
-		return
-	}
-	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
-	s.waiters[listName] = waitersList
 }
 
 func (s *Store) refreshKey(key string) {

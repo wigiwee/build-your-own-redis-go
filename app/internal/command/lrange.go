@@ -3,7 +3,6 @@ package command
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
@@ -21,12 +20,9 @@ func (h *Handler) handleLrangeCommand(writer *bufio.Writer, args []string) error
 	if err != nil {
 		return err
 	}
-
 	resArr := h.store.GetListRange(args[1], start, stop)
-	fmt.Println(resArr)
 
 	resArrStr, err := utils.SerializeArray(resArr)
-	fmt.Println(resArrStr)
 	if err != nil {
 		return err
 	}
