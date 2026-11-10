@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"slices"
 	"strconv"
@@ -102,7 +104,7 @@ func (s *Store) RPushList(listName string, values []string) int {
 func (s *Store) GetListRange(listName string, start, stop int) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	entry, doesExist := s.data[listName]
+	entry, exists := s.data[listName]
 	if start < 0 {
 		start = len(entry.List) + start
 	}
@@ -113,7 +115,7 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 		start = 0
 	}
 
-	if !doesExist || start > len(entry.List) && start > stop {
+	if !exists || start > len(entry.List) && start > stop {
 		return []string{}
 	}
 
@@ -158,8 +160,8 @@ func (s *Store) GetListLen(listName string) int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	entry, doesExist := s.data[listName]
-	if !doesExist {
+	entry, exists := s.data[listName]
+	if !exists {
 		return 0
 	} else {
 		return len(entry.List)
@@ -170,9 +172,9 @@ func (s *Store) LPop(listName string, n int) []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	entry, doesExist := s.data[listName]
+	entry, exists := s.data[listName]
 
-	if !doesExist && len(entry.List) == 0 {
+	if !exists && len(entry.List) == 0 {
 		return nil
 	}
 	if n > len(entry.List) {
@@ -205,7 +207,7 @@ then using select wait untill either select or rpush sends event through channel
 func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 	s.mu.Lock()
 
-	if entry, doesExist := s.data[listName]; doesExist && !s.isExpired(entry) && len(entry.List) > 0 {
+	if entry, exists := s.data[listName]; exists && !s.isExpired(entry) && len(entry.List) > 0 {
 		value := entry.List[0]
 		entry.List = entry.List[1:]
 		s.data[listName] = entry
@@ -267,20 +269,41 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 
 	streamId := &StreamID{
 		Milliseconds: uint64(millSec),
-		Sequence:     uint64(seqNum),
+		SequenceNum:  uint64(seqNum),
 	}
-	entry := &Entry{
-		Type: utils.TYPE_STREAM,
-		Stream: &Stream{
-			Entries: []StreamEntry{
-				StreamEntry{
-					ID:     *streamId,
-					Fields: fields,
+	if streamId.Milliseconds == 0 && streamId.SequenceNum == 0 {
+		return "", errors.New("ERR The ID specified in XADD must be greater than 0-0")
+	}
+	_, exists := s.data[streamkey]
+
+	if !exists {
+
+		entry := Entry{
+			Type: utils.TYPE_STREAM,
+			Stream: &Stream{
+				Entries: []StreamEntry{
+					StreamEntry{
+						ID:     *streamId,
+						Fields: fields,
+					},
 				},
+				LastID: *streamId,
 			},
-		},
+		}
+		s.data[streamkey] = entry
+	} else {
+		fmt.Println("stream already here")
+		_, err := s.data[streamkey].Stream.AddStreamEntry(
+			StreamEntry{
+				ID:     *streamId,
+				Fields: fields,
+			},
+		)
+		if err != nil {
+			return "", err
+		}
 	}
-	s.data[streamkey] = *entry
+	fmt.Println(s.data[streamkey].Stream.Entries)
 	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID.ToString(), nil
 
 }
@@ -289,8 +312,8 @@ func (s *Store) GetType(key string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	entry, doesExist := s.data[key]
-	if !doesExist {
+	entry, exists := s.data[key]
+	if !exists {
 		return "none"
 	} else {
 		return entry.Type

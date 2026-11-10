@@ -32,7 +32,7 @@ func DeserializeString(str string) string {
 }
 
 func BasicError(err string) string {
-	return "-Error " + err + CRLF
+	return "-" + err + CRLF
 }
 
 func SerializeBulkString(word string) (string, error) {
