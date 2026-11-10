@@ -234,7 +234,7 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 
 	select {
 	case result := <-waiter.ch:
-		// s.removeWaiter(listName, waiter)
+		s.removeWaiter(listName, waiter)
 		return result
 
 	case <-timer.C:
@@ -243,11 +243,29 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 			s.mu.Unlock()
 			return <-waiter.ch
 		}
-		// s.removeWaiterLocked(listName, waiter)
+		s.removeWaiterLocked(listName, waiter)
 
 		s.mu.Unlock()
 		return nil
 	}
+}
+
+func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
+	waitersList := s.waiters[listName]
+	idx := -1
+	for i := 0; i < len(waitersList); i++ {
+		if waitersList[i] == waiter {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		s.mu.Unlock()
+		log.Println("fatal you should take a look: BLOP waiter not found when trying to remove the waiter")
+		return
+	}
+	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
+	s.waiters[listName] = waitersList
 }
 func (s *Store) AddStream(streamkey string, id string, args []string) (string, error) {
 	s.mu.Lock()
