@@ -30,5 +30,5 @@ type StreamEntry struct {
 }
 
 func (sId StreamID) ToString() string {
-	return strconv.FormatUint(sId.Milliseconds, 64) + "-" + strconv.FormatUint(sId.Sequence, 64)
+	return strconv.FormatUint(sId.Milliseconds, 10) + "-" + strconv.FormatUint(sId.Sequence, 10)
 }

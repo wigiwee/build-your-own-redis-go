@@ -256,11 +256,11 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 		fields[args[i]] = args[i+1]
 	}
 	splitId := strings.Split(id, "-")
-	millSec, err := strconv.ParseInt(splitId[0], 0, 64)
+	millSec, err := strconv.ParseInt(splitId[0], 10, 64)
 	if err != nil {
 		return "", err
 	}
-	seqNum, err := strconv.ParseInt(splitId[1], 0, 64)
+	seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
 	if err != nil {
 		return "", err
 	}
