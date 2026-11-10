@@ -3,6 +3,8 @@ package storage
 import (
 	"log"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -253,21 +255,36 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 	for i := 0; i < len(args); i = i + 2 {
 		fields[args[i]] = args[i+1]
 	}
+	splitId := strings.Split(id, "-")
+	millSec, err := strconv.ParseInt(splitId[0], 0, 64)
+	if err != nil {
+		return "", err
+	}
+	seqNum, err := strconv.ParseInt(splitId[1], 0, 64)
+	if err != nil {
+		return "", err
+	}
+
+	streamId := &StreamID{
+		Milliseconds: uint64(millSec),
+		Sequence:     uint64(seqNum),
+	}
 	entry := &Entry{
 		Type: utils.TYPE_STREAM,
 		Stream: &Stream{
 			Entries: []StreamEntry{
 				StreamEntry{
-					ID:     id,
+					ID:     *streamId,
 					Fields: fields,
 				},
 			},
 		},
 	}
 	s.data[streamkey] = *entry
-	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID, nil
+	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID.ToString(), nil
 
 }
+
 func (s *Store) GetType(key string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -1,6 +1,9 @@
 package storage
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type Entry struct {
 	Type string
@@ -22,6 +25,10 @@ type StreamID struct {
 }
 
 type StreamEntry struct {
-	ID     string
+	ID     StreamID
 	Fields map[string]string
+}
+
+func (sId StreamID) ToString() string {
+	return strconv.FormatUint(sId.Milliseconds, 64) + "-" + strconv.FormatUint(sId.Sequence, 64)
 }
