@@ -267,6 +267,60 @@ func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
 	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
 	s.waiters[listName] = waitersList
 }
+func (s *Store) GenerateStreamID(streamKey, input string) (StreamID, error) {
+	streamId := StreamID{
+		Milliseconds: uint64(time.Now().UnixMilli()),
+	}
+	_, exists := s.data[streamKey]
+	if input == "*" {
+		if !exists {
+			streamId.SequenceNum = 0
+
+		} else if s.data[streamKey].Stream.LastID.Milliseconds == streamId.Milliseconds {
+			streamId.SequenceNum = s.data[streamKey].Stream.LastID.SequenceNum + 1
+		} else {
+			streamId.SequenceNum = 0
+		}
+		return streamId, nil
+	} else {
+
+		splitId := strings.Split(input, "-")
+
+		millSec, err := strconv.ParseInt(splitId[0], 10, 64)
+		if err != nil {
+			return StreamID{}, err
+		}
+
+		streamId.Milliseconds = uint64(millSec)
+
+		if splitId[1] == "*" {
+			if !exists {
+				if streamId.Milliseconds == 0 {
+					streamId.SequenceNum = 1
+				} else {
+					streamId.SequenceNum = 0
+				}
+				return streamId, nil
+			}
+			if s.data[streamKey].Stream.LastID.Milliseconds == streamId.Milliseconds {
+				streamId.SequenceNum = s.data[streamKey].Stream.LastID.SequenceNum + 1
+			} else {
+				streamId.SequenceNum = 0
+			}
+			return streamId, nil
+		} else {
+			seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
+			if err != nil {
+				return StreamID{}, err
+			}
+			return StreamID{
+				Milliseconds: uint64(millSec),
+				SequenceNum:  uint64(seqNum),
+			}, nil
+
+		}
+	}
+}
 func (s *Store) AddStream(streamkey string, id string, args []string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -275,24 +329,15 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 	for i := 0; i < len(args); i = i + 2 {
 		fields[args[i]] = args[i+1]
 	}
-	splitId := strings.Split(id, "-")
-	millSec, err := strconv.ParseInt(splitId[0], 10, 64)
-	if err != nil {
-		return "", err
-	}
-	seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
-	if err != nil {
-		return "", err
-	}
 
-	streamId := &StreamID{
-		Milliseconds: uint64(millSec),
-		SequenceNum:  uint64(seqNum),
+	_, exists := s.data[streamkey]
+	streamId, err := s.GenerateStreamID(streamkey, id)
+	if err != nil {
+		return "", err
 	}
 	if streamId.Milliseconds == 0 && streamId.SequenceNum == 0 {
 		return "", errors.New("ERR The ID specified in XADD must be greater than 0-0")
 	}
-	_, exists := s.data[streamkey]
 
 	if !exists {
 
@@ -301,11 +346,11 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 			Stream: &Stream{
 				Entries: []StreamEntry{
 					StreamEntry{
-						ID:     *streamId,
+						ID:     streamId,
 						Fields: fields,
 					},
 				},
-				LastID: *streamId,
+				LastID: streamId,
 			},
 		}
 		s.data[streamkey] = entry
@@ -313,7 +358,7 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 		fmt.Println("stream already here")
 		_, err := s.data[streamkey].Stream.AddStreamEntry(
 			StreamEntry{
-				ID:     *streamId,
+				ID:     streamId,
 				Fields: fields,
 			},
 		)

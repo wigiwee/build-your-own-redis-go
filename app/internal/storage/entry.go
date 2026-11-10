@@ -49,6 +49,35 @@ func (s *Stream) ValidateId(streamId StreamID) error {
 
 }
 
+// func GenerateStreamID(exists bool,streamKey, input string) (StreamID, error) {
+
+// 	if input == "*" {
+// 		if exists{
+
+// 		}
+// 	} else {
+
+// 		splitId := strings.Split(input, "-")
+// 		if splitId[1] == "*" {
+
+// 		} else {
+// 			millSec, err := strconv.ParseInt(splitId[0], 10, 64)
+// 			if err != nil {
+// 				return StreamID{}, err
+// 			}
+// 			seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
+// 			if err != nil {
+// 				return StreamID{}, err
+// 			}
+// 			return StreamID{
+// 				Milliseconds: uint64(millSec),
+// 				SequenceNum:  uint64(seqNum),
+// 			}, nil
+
+// 		}
+// 	}
+// }
+
 func (s *Stream) AddStreamEntry(streamEntry StreamEntry) (StreamID, error) {
 	err := s.ValidateId(streamEntry.ID)
 	if err != nil {
