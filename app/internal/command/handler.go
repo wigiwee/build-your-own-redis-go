@@ -82,6 +82,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err.Error())
 		}
+	case "XADD":
+		err := h.handleXAddCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err.Error())
+		}
 
 	default:
 		WriteError(writer, "Unknown Command")
@@ -107,4 +112,5 @@ type Store interface {
 	BLPop(listName string, ttl time.Duration) []string
 	GetListRange(listName string, start, stop int) []string
 	GetType(key string) string
+	AddStream(streamkey string, id string, args []string) (string, error)
 }

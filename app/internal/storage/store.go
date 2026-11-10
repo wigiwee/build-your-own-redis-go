@@ -245,6 +245,29 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 		return nil
 	}
 }
+func (s *Store) AddStream(streamkey string, id string, args []string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	fields := make(map[string]string)
+	for i := 0; i < len(args); i = i + 2 {
+		fields[args[i]] = args[i+1]
+	}
+	entry := &Entry{
+		Type: utils.TYPE_STREAM,
+		Stream: &Stream{
+			Entries: []StreamEntry{
+				StreamEntry{
+					ID:     id,
+					Fields: fields,
+				},
+			},
+		},
+	}
+	s.data[streamkey] = *entry
+	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID, nil
+
+}
 func (s *Store) GetType(key string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
