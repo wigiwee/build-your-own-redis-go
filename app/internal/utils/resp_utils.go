@@ -91,9 +91,37 @@ func SerializeArray(arr []string) (string, error) {
 	}
 	return output, nil
 }
+func SerializeMap(m map[string][]string) (string, error) {
+	if m == nil {
+		return "*-1\r\n", nil
+	}
 
-// *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+	var output strings.Builder
 
+	output.WriteString("*")
+	output.WriteString(strconv.Itoa(len(m)))
+	output.WriteString(CRLF)
+
+	for key, values := range m {
+		output.WriteString("*2")
+		output.WriteString(CRLF)
+
+		keyStr, err := SerializeBulkString(key)
+		if err != nil {
+			return "", err
+		}
+
+		valueArr, err := SerializeArray(values)
+		if err != nil {
+			return "", err
+		}
+
+		output.WriteString(keyStr)
+		output.WriteString(valueArr)
+	}
+
+	return output.String(), nil
+}
 func DeserializeArray(reader *bufio.Reader) ([]string, error) {
 	header, err := readRESPLine(reader)
 	if err != nil {

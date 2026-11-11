@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -250,6 +251,73 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 	}
 }
 
+func (s *Store) RangeStream(streamKey string, start string, stop string) (map[string][]string, error) {
+	s.mu.Lock()
+	s.mu.Unlock()
+
+	entry, exists := s.data[streamKey]
+	if !exists {
+		return nil, errors.New("stream with given key doesn't exist")
+	}
+
+	outputMap := make(map[string][]string)
+
+	startSplit := strings.Split(start, "-")
+	stopSplit := strings.Split(stop, "-")
+
+	startStreamId := &StreamID{}
+	millisec, err := strconv.ParseUint(startSplit[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	startStreamId.Milliseconds = millisec
+	if len(startSplit) == 2 {
+		seq, err := strconv.ParseUint(startSplit[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		startStreamId.SequenceNum = seq
+	} else {
+		startStreamId.SequenceNum = 0
+	}
+
+	stopStreamId := &StreamID{}
+	millisec, err = strconv.ParseUint(stopSplit[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	stopStreamId.Milliseconds = millisec
+	if len(startSplit) == 2 {
+		seq, err := strconv.ParseUint(stopSplit[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		stopStreamId.SequenceNum = seq
+	} else {
+		stopStreamId.SequenceNum = math.MaxUint64
+	}
+	fmt.Println(startStreamId)
+	fmt.Println(stopStreamId)
+	for _, entry := range entry.Stream.Entries {
+		if entry.ID.Milliseconds < startStreamId.Milliseconds {
+			continue
+		}
+		if entry.ID.Milliseconds == startStreamId.Milliseconds && (entry.ID.SequenceNum < startStreamId.SequenceNum) {
+			continue
+		}
+		if entry.ID.Milliseconds <= stopStreamId.Milliseconds {
+			if entry.ID.Milliseconds == stopStreamId.Milliseconds && entry.ID.SequenceNum > stopStreamId.SequenceNum {
+				continue
+			}
+			outputMap[entry.ID.ToString()] = utils.MapToString(entry.Fields)
+		} else {
+			break
+		}
+	}
+	fmt.Println(outputMap)
+	return outputMap, nil
+}
+
 func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
 	waitersList := s.waiters[listName]
 	idx := -1
@@ -286,7 +354,7 @@ func (s *Store) GenerateStreamID(streamKey, input string) (StreamID, error) {
 
 		splitId := strings.Split(input, "-")
 
-		millSec, err := strconv.ParseInt(splitId[0], 10, 64)
+		millSec, err := strconv.ParseUint(splitId[0], 10, 64)
 		if err != nil {
 			return StreamID{}, err
 		}
@@ -309,7 +377,7 @@ func (s *Store) GenerateStreamID(streamKey, input string) (StreamID, error) {
 			}
 			return streamId, nil
 		} else {
-			seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
+			seqNum, err := strconv.ParseUint(splitId[1], 10, 64)
 			if err != nil {
 				return StreamID{}, err
 			}
