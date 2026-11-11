@@ -3,7 +3,9 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,6 +36,25 @@ type StreamEntry struct {
 func (sId *StreamID) ToString() string {
 	return strconv.FormatUint(sId.Milliseconds, 10) + "-" + strconv.FormatUint(sId.SequenceNum, 10)
 }
+func GetStreamID(input string) (StreamID, error) {
+	splitInput := strings.Split(input, "-")
+	output := StreamID{}
+	milli, err := strconv.ParseUint(splitInput[0], 10, 64)
+	if err != nil {
+		return StreamID{}, err
+	}
+	output.Milliseconds = milli
+	if len(splitInput) == 2 {
+		seq, err := strconv.ParseUint(splitInput[1], 10, 64)
+		if err != nil {
+			return StreamID{}, err
+		}
+		output.SequenceNum = seq
+	} else {
+		output.SequenceNum = 0
+	}
+	return output, nil
+}
 
 func (s *Stream) ValidateId(streamId StreamID) error {
 	lastId := s.LastID
@@ -49,35 +70,25 @@ func (s *Stream) ValidateId(streamId StreamID) error {
 
 }
 
-// func GenerateStreamID(exists bool,streamKey, input string) (StreamID, error) {
-
-// 	if input == "*" {
-// 		if exists{
-
-// 		}
-// 	} else {
-
-// 		splitId := strings.Split(input, "-")
-// 		if splitId[1] == "*" {
-
-// 		} else {
-// 			millSec, err := strconv.ParseInt(splitId[0], 10, 64)
-// 			if err != nil {
-// 				return StreamID{}, err
-// 			}
-// 			seqNum, err := strconv.ParseInt(splitId[1], 10, 64)
-// 			if err != nil {
-// 				return StreamID{}, err
-// 			}
-// 			return StreamID{
-// 				Milliseconds: uint64(millSec),
-// 				SequenceNum:  uint64(seqNum),
-// 			}, nil
-
-// 		}
-// 	}
-// }
-
+func (s *Store) removeWaiter(listName string, waiter *Waiter) {
+	s.mu.Lock()
+	waitersList := s.waiters[listName]
+	idx := -1
+	for i := 0; i < len(waitersList); i++ {
+		if waitersList[i] == waiter {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		s.mu.Unlock()
+		log.Println("fatal you should take a look: BLOP waiter not found when trying to remove the waiter")
+		return
+	}
+	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
+	s.waiters[listName] = waitersList
+	s.mu.Unlock()
+}
 func (s *Stream) AddStreamEntry(streamEntry StreamEntry) (StreamID, error) {
 	err := s.ValidateId(streamEntry.ID)
 	if err != nil {
@@ -90,3 +101,4 @@ func (s *Stream) AddStreamEntry(streamEntry StreamEntry) (StreamID, error) {
 	return s.LastID, nil
 
 }
+

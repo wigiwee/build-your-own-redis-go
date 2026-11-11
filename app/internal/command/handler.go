@@ -120,4 +120,5 @@ type Store interface {
 	GetType(key string) string
 	AddStream(streamkey string, id string, args []string) (string, error)
 	RangeStream(streamKey string, start string, stop string) ([]storage.StreamEntry, error)
+	ReadStream(streamKey string, streamId string) ([]storage.StreamEntry, error)
 }
