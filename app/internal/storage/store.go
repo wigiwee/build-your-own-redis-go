@@ -287,19 +287,25 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 	}
 
 	stopStreamId := &StreamID{}
-	millisec, err := strconv.ParseUint(stopSplit[0], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	stopStreamId.Milliseconds = millisec
-	if len(startSplit) == 2 {
-		seq, err := strconv.ParseUint(stopSplit[1], 10, 64)
+	if stop == "+" {
+		stopStreamId.Milliseconds = entry.Stream.LastID.Milliseconds
+		stopStreamId.SequenceNum = entry.Stream.LastID.SequenceNum
+	} else {
+
+		millisec, err := strconv.ParseUint(stopSplit[0], 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		stopStreamId.SequenceNum = seq
-	} else {
-		stopStreamId.SequenceNum = math.MaxUint64
+		stopStreamId.Milliseconds = millisec
+		if len(startSplit) == 2 {
+			seq, err := strconv.ParseUint(stopSplit[1], 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			stopStreamId.SequenceNum = seq
+		} else {
+			stopStreamId.SequenceNum = math.MaxUint64
+		}
 	}
 	fmt.Println(startStreamId)
 	fmt.Println(stopStreamId)
