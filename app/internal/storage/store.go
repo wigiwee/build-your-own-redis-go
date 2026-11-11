@@ -251,7 +251,7 @@ func (s *Store) BLPop(listName string, ttl time.Duration) []string {
 	}
 }
 
-func (s *Store) RangeStream(streamKey string, start string, stop string) (map[string][]string, error) {
+func (s *Store) RangeStream(streamKey string, start string, stop string) ([]StreamEntry, error) {
 	s.mu.Lock()
 	s.mu.Unlock()
 
@@ -260,7 +260,7 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) (map[st
 		return nil, errors.New("stream with given key doesn't exist")
 	}
 
-	outputMap := make(map[string][]string)
+	output := []StreamEntry{}
 
 	startSplit := strings.Split(start, "-")
 	stopSplit := strings.Split(stop, "-")
@@ -309,13 +309,13 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) (map[st
 			if entry.ID.Milliseconds == stopStreamId.Milliseconds && entry.ID.SequenceNum > stopStreamId.SequenceNum {
 				continue
 			}
-			outputMap[entry.ID.ToString()] = utils.MapToString(entry.Fields)
+			output = append(output, entry)
 		} else {
 			break
 		}
 	}
-	fmt.Println(outputMap)
-	return outputMap, nil
+	fmt.Println(output)
+	return output, nil
 }
 
 func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {

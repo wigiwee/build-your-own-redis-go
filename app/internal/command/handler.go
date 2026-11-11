@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
@@ -118,5 +119,5 @@ type Store interface {
 	GetListRange(listName string, start, stop int) []string
 	GetType(key string) string
 	AddStream(streamkey string, id string, args []string) (string, error)
-	RangeStream(streamKey string, start string, stop string) (map[string][]string, error)
+	RangeStream(streamKey string, start string, stop string) ([]storage.StreamEntry, error)
 }
