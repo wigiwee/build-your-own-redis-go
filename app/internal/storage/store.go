@@ -266,23 +266,28 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 	stopSplit := strings.Split(stop, "-")
 
 	startStreamId := &StreamID{}
-	millisec, err := strconv.ParseUint(startSplit[0], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	startStreamId.Milliseconds = millisec
-	if len(startSplit) == 2 {
-		seq, err := strconv.ParseUint(startSplit[1], 10, 64)
+	if start == "-" {
+		startStreamId.Milliseconds = 0
+		startStreamId.SequenceNum = 1
+	} else {
+		millisec, err := strconv.ParseUint(startSplit[0], 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		startStreamId.SequenceNum = seq
-	} else {
-		startStreamId.SequenceNum = 0
+		startStreamId.Milliseconds = millisec
+		if len(startSplit) == 2 {
+			seq, err := strconv.ParseUint(startSplit[1], 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			startStreamId.SequenceNum = seq
+		} else {
+			startStreamId.SequenceNum = 0
+		}
 	}
 
 	stopStreamId := &StreamID{}
-	millisec, err = strconv.ParseUint(stopSplit[0], 10, 64)
+	millisec, err := strconv.ParseUint(stopSplit[0], 10, 64)
 	if err != nil {
 		return nil, err
 	}
