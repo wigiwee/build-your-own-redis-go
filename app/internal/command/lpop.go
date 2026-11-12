@@ -24,14 +24,14 @@ func (h *Handler) handleLPopCommand(writer *bufio.Writer, args []string) error {
 	if len(pop) == 0 {
 		writer.Write([]byte(utils.NULL_BULK_STR))
 	} else if len(pop) == 1 {
-		bulkstr, err := utils.SerializeBulkString(pop[0])
+		bulkstr, err := utils.Serialize(pop[0])
 		if err != nil {
 			return err
 		}
 		writer.Write([]byte(bulkstr))
 
 	} else {
-		respArr, err := utils.SerializeArray(pop)
+		respArr, err := utils.Serialize(pop)
 		if err != nil {
 			return err
 		}

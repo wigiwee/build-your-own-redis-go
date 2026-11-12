@@ -2,6 +2,7 @@ package command
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ func NewHandler(store Store) *Handler {
 func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 
 	if len(args) == 0 {
-		log.Fatal("empty args received")
+		WriteError(writer, errors.New("no args received"))
 	}
 
 	switch strings.ToUpper(args[0]) {
@@ -31,80 +32,87 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 	case "PING":
 		err := h.handlePingCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "ECHO":
 		err := h.handleEchoCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "GET":
 		err := h.handleGetCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "SET":
 		err := h.handleSetCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "RPUSH":
 		err := h.handleRpushCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "LPUSH":
 		err := h.handleLpushCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "LRANGE":
 		err := h.handleLrangeCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "LLEN":
 		err := h.handleLlenCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "LPOP":
 		err := h.handleLPopCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "BLPOP":
 		err := h.handleBLPopCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "TYPE":
 		err := h.handleTypeCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "XADD":
 		err := h.handleXAddCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 	case "XRANGE":
 		err := h.handleXRangeCommand(writer, args)
 		if err != nil {
-			WriteError(writer, err.Error())
+			WriteError(writer, err)
 		}
 
 	default:
-		WriteError(writer, "Unknown Command")
+		WriteError(writer, errors.New("unsupported command"))
 
 	}
 
 }
 
-func WriteError(writer *bufio.Writer, errorStr string) {
-	_, err := writer.Write([]byte(utils.BasicError(errorStr)))
-	writer.Flush()
-	log.Println("error here", err)
+func WriteError(writer *bufio.Writer, err error) {
+	serErr, err := utils.Serialize(err)
+	_, err = writer.Write([]byte(serErr))
+	if err != nil {
+		log.Println("error writing err", err)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		log.Println("error writing err", err)
+	}
 }
 
 type Store interface {

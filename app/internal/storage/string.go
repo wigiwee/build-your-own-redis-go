@@ -27,7 +27,7 @@ func (s *Store) Get(key string) (string, bool) {
 	entry, exists := s.data[key]
 
 	//todo: to be revised
-	if !exists && entry.Type == utils.TYPE_STRING {
+	if !exists || entry.Type != utils.TYPE_STRING {
 		return "", false
 	}
 	if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {

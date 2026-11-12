@@ -12,7 +12,11 @@ func (h *Handler) handleLpushCommand(writer *bufio.Writer, args []string) error 
 		return errors.New("invalid command")
 	}
 	resInt := h.store.LPushList(args[1], args[2:])
-	writer.Write([]byte(utils.SerializeInt(resInt)))
+	serInt, err := utils.Serialize(resInt)
+	if err != nil {
+		return err
+	}
+	writer.Write([]byte(serInt))
 	writer.Flush()
 	return nil
 }

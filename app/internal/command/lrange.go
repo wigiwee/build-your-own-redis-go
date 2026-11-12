@@ -22,7 +22,7 @@ func (h *Handler) handleLrangeCommand(writer *bufio.Writer, args []string) error
 	}
 	resArr := h.store.GetListRange(args[1], start, stop)
 
-	resArrStr, err := utils.SerializeArray(resArr)
+	resArrStr, err := utils.Serialize(resArr)
 	if err != nil {
 		return err
 	}

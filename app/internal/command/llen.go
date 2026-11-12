@@ -13,7 +13,11 @@ func (h *Handler) handleLlenCommand(writer *bufio.Writer, args []string) error {
 	}
 
 	resInt := h.store.GetListLen(args[1])
-	writer.Write([]byte(utils.SerializeInt(resInt)))
+	serInt, err := utils.Serialize(resInt)
+	if err != nil {
+		return err
+	}
+	writer.Write([]byte(serInt))
 	writer.Flush()
 	return nil
 }

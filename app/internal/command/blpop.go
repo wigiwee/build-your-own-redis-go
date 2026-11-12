@@ -3,7 +3,6 @@ package command
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -15,16 +14,12 @@ func (h *Handler) handleBLPopCommand(writer *bufio.Writer, args []string) error 
 		return errors.New("invalid command")
 	}
 	n, err := strconv.ParseFloat(args[2], 64)
-	fmt.Println(n)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	ttl := time.Duration(n * float64(time.Second))
-	fmt.Println("calling func")
 	output := h.store.BLPop(args[1], ttl)
-	fmt.Println("got res ", output)
-	respArr, err := utils.SerializeArray(output)
+	respArr, err := utils.Serialize(output)
 	if err != nil {
 		return err
 	}

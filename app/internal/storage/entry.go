@@ -2,11 +2,11 @@ package storage
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
 type Entry struct {
@@ -30,7 +30,19 @@ type StreamID struct {
 
 type StreamEntry struct {
 	ID     StreamID
-	Fields map[string]string
+	Fields []string
+}
+
+func (streamEntry StreamEntry) SerializeRESP() (string, error) {
+	serId, err := utils.Serialize(streamEntry.ID.ToString())
+	if err != nil {
+		return "", err
+	}
+	serFeilds, err := utils.Serialize(streamEntry.Fields)
+	if err != nil {
+		return "", err
+	}
+	return "*2" + utils.CRLF + serId + serFeilds, nil
 }
 
 func (sId *StreamID) ToString() string {
@@ -82,23 +94,36 @@ func (s *Store) removeWaiter(listName string, waiter *Waiter) {
 	}
 	if idx == -1 {
 		s.mu.Unlock()
-		log.Println("fatal you should take a look: BLOP waiter not found when trying to remove the waiter")
 		return
 	}
 	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
 	s.waiters[listName] = waitersList
 	s.mu.Unlock()
 }
+func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
+	waitersList := s.waiters[listName]
+	idx := -1
+	for i := 0; i < len(waitersList); i++ {
+		if waitersList[i] == waiter {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return
+	}
+	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
+	s.waiters[listName] = waitersList
+}
+
 func (s *Stream) AddStreamEntry(streamEntry StreamEntry) (StreamID, error) {
 	err := s.ValidateId(streamEntry.ID)
 	if err != nil {
 		return StreamID{}, err
 	}
 	s.Entries = append(s.Entries, streamEntry)
-	fmt.Println("from the func", s.Entries)
 	s.LastID = s.Entries[len(s.Entries)-1].ID
 
 	return s.LastID, nil
 
 }
-

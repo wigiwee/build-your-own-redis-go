@@ -16,7 +16,7 @@ func (h *Handler) handleXAddCommand(writer *bufio.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	bulkStr, err := utils.SerializeBulkString(output)
+	bulkStr, err := utils.Serialize(output)
 	writer.Write([]byte(bulkStr))
 	writer.Flush()
 	return nil

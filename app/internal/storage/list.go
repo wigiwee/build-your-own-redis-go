@@ -37,6 +37,9 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	entry, exists := s.data[listName]
+	if !exists {
+		return []string{}
+	}
 	if start < 0 {
 		start = len(entry.List) + start
 	}
@@ -47,15 +50,15 @@ func (s *Store) GetListRange(listName string, start, stop int) []string {
 		start = 0
 	}
 
-	if !exists || start > len(entry.List) && start > stop {
-		return []string{}
-	}
-
 	if stop >= len(entry.List) {
 		stop = len(entry.List) - 1
 	}
 
-	return entry.List[start : stop+1]
+	if start > len(entry.List) || start > stop || len(entry.List) == 0 {
+		return []string{}
+	}
+
+	return slices.Clone(entry.List[start : stop+1])
 }
 
 func (s *Store) LPushList(listName string, values []string) int {
@@ -106,7 +109,7 @@ func (s *Store) LPop(listName string, n int) []string {
 
 	entry, exists := s.data[listName]
 
-	if !exists && len(entry.List) == 0 {
+	if !exists || len(entry.List) == 0 {
 		return nil
 	}
 	if n > len(entry.List) {

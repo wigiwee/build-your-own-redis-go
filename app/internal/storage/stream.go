@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -15,11 +14,9 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	fields := make(map[string]string)
-	for i := 0; i < len(args); i = i + 2 {
-		fields[args[i]] = args[i+1]
+	if len(args)%2 != 0 {
+		return "", errors.New("invalid fields")
 	}
-
 	_, exists := s.data[streamkey]
 	streamId, err := s.GenerateStreamID(streamkey, id)
 	if err != nil {
@@ -37,7 +34,7 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 				Entries: []StreamEntry{
 					StreamEntry{
 						ID:     streamId,
-						Fields: fields,
+						Fields: args,
 					},
 				},
 				LastID: streamId,
@@ -45,18 +42,16 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 		}
 		s.data[streamkey] = entry
 	} else {
-		fmt.Println("stream already here")
 		_, err := s.data[streamkey].Stream.AddStreamEntry(
 			StreamEntry{
 				ID:     streamId,
-				Fields: fields,
+				Fields: args,
 			},
 		)
 		if err != nil {
 			return "", err
 		}
 	}
-	fmt.Println(s.data[streamkey].Stream.Entries)
 	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID.ToString(), nil
 
 }
@@ -77,7 +72,7 @@ func (s *Store) ReadStream(streamKey string, streamId string) ([]StreamEntry, er
 
 func (s *Store) RangeStream(streamKey string, start string, stop string) ([]StreamEntry, error) {
 	s.mu.Lock()
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 
 	entry, exists := s.data[streamKey]
 	if !exists {
@@ -92,7 +87,7 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 	startStreamId := &StreamID{}
 	if start == "-" {
 		startStreamId.Milliseconds = 0
-		startStreamId.SequenceNum = 1
+		startStreamId.SequenceNum = 0
 	} else {
 		millisec, err := strconv.ParseUint(startSplit[0], 10, 64)
 		if err != nil {
@@ -121,7 +116,7 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 			return nil, err
 		}
 		stopStreamId.Milliseconds = millisec
-		if len(startSplit) == 2 {
+		if len(stopSplit) == 2 {
 			seq, err := strconv.ParseUint(stopSplit[1], 10, 64)
 			if err != nil {
 				return nil, err
@@ -131,8 +126,11 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 			stopStreamId.SequenceNum = math.MaxUint64
 		}
 	}
-	fmt.Println(startStreamId)
-	fmt.Println(stopStreamId)
+	//validate start and stop
+	if (startStreamId.Milliseconds > stopStreamId.Milliseconds) || (startStreamId.Milliseconds == stopStreamId.Milliseconds && startStreamId.SequenceNum > stopStreamId.SequenceNum) {
+		return nil, errors.New("Invalid start and stop ids")
+	}
+
 	for _, entry := range entry.Stream.Entries {
 		if entry.ID.Milliseconds < startStreamId.Milliseconds {
 			continue
@@ -149,7 +147,6 @@ func (s *Store) RangeStream(streamKey string, start string, stop string) ([]Stre
 			break
 		}
 	}
-	fmt.Println(output)
 	return output, nil
 }
 

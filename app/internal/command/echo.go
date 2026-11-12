@@ -11,7 +11,7 @@ func (h *Handler) handleEchoCommand(writer *bufio.Writer, args []string) error {
 	if len(args) != 2 {
 		return errors.New("invalid input")
 	}
-	bulkstr, err := utils.SerializeBulkString(args[1])
+	bulkstr, err := utils.Serialize(args[1])
 	if err != nil {
 		return err
 	}

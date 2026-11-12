@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"log"
 	"sync"
 	"time"
 )
@@ -24,24 +23,6 @@ func NewStore() *Store {
 	}
 	return s
 
-}
-
-func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
-	waitersList := s.waiters[listName]
-	idx := -1
-	for i := 0; i < len(waitersList); i++ {
-		if waitersList[i] == waiter {
-			idx = i
-			break
-		}
-	}
-	if idx == -1 {
-		s.mu.Unlock()
-		log.Println("fatal you should take a look: BLOP waiter not found when trying to remove the waiter")
-		return
-	}
-	waitersList = append(waitersList[:idx], waitersList[idx+1:]...)
-	s.waiters[listName] = waitersList
 }
 
 func (s *Store) GetType(key string) string {

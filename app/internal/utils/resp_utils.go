@@ -5,20 +5,74 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
-func SerializeInt(num int) string {
-	return ":" + strconv.Itoa(num) + CRLF
+type RESPSerializer interface {
+	SerializeRESP() (string, error)
 }
+
+func Serialize(value any) (string, error) {
+	if value == nil {
+		return "$-1" + CRLF, nil
+	}
+
+	if respSerializer, ok := value.(RESPSerializer); ok {
+		return respSerializer.SerializeRESP()
+	}
+	var errorType = reflect.TypeOf((*error)(nil)).Elem()
+
+	rv := reflect.ValueOf(value)
+
+	if rv.Type().Implements(errorType) {
+		return "-" + value.(error).Error() + CRLF, nil
+	}
+
+	switch rv.Kind() {
+
+	case reflect.Int, reflect.Int8, reflect.Int16,
+		reflect.Int32, reflect.Int64:
+		return ":" + strconv.FormatInt(int64(rv.Int()), 10) + CRLF, nil
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64:
+		return ":" + strconv.FormatUint(uint64(rv.Uint()), 10) + CRLF, nil
+
+	case reflect.String:
+		return "$" + strconv.Itoa(len(rv.String())) + CRLF + rv.String() + CRLF, nil
+
+	case reflect.Array, reflect.Slice:
+		if rv.Kind() == reflect.Slice && rv.IsNil() {
+			return "*-1" + CRLF, nil
+		}
+		var output strings.Builder
+		output.WriteString("*")
+		output.WriteString(strconv.Itoa(rv.Len()))
+		output.WriteString(CRLF)
+
+		for i := 0; i < rv.Len(); i++ {
+			serStr, err := Serialize(rv.Index(i).Interface())
+			if err != nil {
+				return "", err
+			}
+			output.WriteString(serStr)
+		}
+
+		return output.String(), nil
+	default:
+		return "", errors.New("unsupported type")
+	}
+}
+
 func DeserializeInt(str string) (int, error) {
 	if str[0] != ':' || len(str) < 4 {
 		return 0, errors.New("Invalid resp int")
 	}
 	return strconv.Atoi(str[1 : len(str)-2])
 }
+
 func SerializeString(str string) (string, error) {
 	if len(str) == 0 {
 		return "", errors.New("null string passed")
@@ -27,26 +81,11 @@ func SerializeString(str string) (string, error) {
 }
 
 // todo: figure out if really needed
-func DeserializeString(str string) string {
-	return ""
-}
-
-func BasicError(err string) string {
-	return "-" + err + CRLF
-}
-
-func SerializeBulkString(word string) (string, error) {
-	if len(word) == 0 {
-		return "", errors.New("null string passed")
-	}
-	word = strings.TrimLeftFunc(word, unicode.IsSpace)
-	word = strings.TrimRightFunc(word, unicode.IsSpace)
-
-	return "$" + strconv.Itoa(len(word)) + CRLF + word + CRLF, nil
-}
 
 func DeserializeBulkString(str string) (string, error) {
-
+	if len(str) == 0 {
+		return "", errors.New("invalid input")
+	}
 	if str[0] != '$' || len(str) == 0 {
 		return "", errors.New("invalid bulk string")
 	}
@@ -74,54 +113,6 @@ func DeserializeBulkString(str string) (string, error) {
 	return parts[1][:stringLen], nil
 }
 
-func SerializeArray(arr []string) (string, error) {
-
-	if arr == nil {
-		return "*-1\r\n", nil
-	}
-
-	output := "*" + strconv.Itoa(len(arr)) + CRLF
-
-	for _, str := range arr {
-		bulkStr, err := SerializeBulkString(str)
-		if err != nil {
-			return "", err
-		}
-		output += bulkStr
-	}
-	return output, nil
-}
-func SerializeMap(m map[string][]string) (string, error) {
-	if m == nil {
-		return "*-1\r\n", nil
-	}
-
-	var output strings.Builder
-
-	output.WriteString("*")
-	output.WriteString(strconv.Itoa(len(m)))
-	output.WriteString(CRLF)
-
-	for key, values := range m {
-		output.WriteString("*2")
-		output.WriteString(CRLF)
-
-		keyStr, err := SerializeBulkString(key)
-		if err != nil {
-			return "", err
-		}
-
-		valueArr, err := SerializeArray(values)
-		if err != nil {
-			return "", err
-		}
-
-		output.WriteString(keyStr)
-		output.WriteString(valueArr)
-	}
-
-	return output.String(), nil
-}
 func DeserializeArray(reader *bufio.Reader) ([]string, error) {
 	header, err := readRESPLine(reader)
 	if err != nil {

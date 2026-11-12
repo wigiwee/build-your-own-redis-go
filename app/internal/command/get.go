@@ -16,7 +16,7 @@ func (h *Handler) handleGetCommand(writer *bufio.Writer, args []string) error {
 	if !exists {
 		writer.Write([]byte(utils.NULL_BULK_STR))
 	} else {
-		bulkStr, err := utils.SerializeBulkString(value)
+		bulkStr, err := utils.Serialize(value)
 		if err != nil {
 			log.Printf("error serializing bulk str ", value)
 		}
