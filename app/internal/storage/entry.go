@@ -100,6 +100,33 @@ func (s *Store) removeWaiter(listName string, waiter *Waiter) {
 	s.waiters[listName] = waitersList
 	s.mu.Unlock()
 }
+func (s *Stream) getEntries(startStreamId, stopStreamId StreamID) ([]StreamEntry, error) {
+
+	if (startStreamId.Milliseconds > stopStreamId.Milliseconds) || (startStreamId.Milliseconds == stopStreamId.Milliseconds && startStreamId.SequenceNum > stopStreamId.SequenceNum) {
+		return nil, errors.New("Invalid start and stop ids")
+	}
+
+	output := []StreamEntry{}
+	for _, entry := range s.Entries {
+		if entry.ID.Milliseconds < startStreamId.Milliseconds {
+			continue
+		}
+		if entry.ID.Milliseconds == startStreamId.Milliseconds && (entry.ID.SequenceNum < startStreamId.SequenceNum) {
+			continue
+		}
+		if entry.ID.Milliseconds <= stopStreamId.Milliseconds {
+			if entry.ID.Milliseconds == stopStreamId.Milliseconds && entry.ID.SequenceNum > stopStreamId.SequenceNum {
+				continue
+			}
+			output = append(output, entry)
+		} else {
+			break
+		}
+	}
+	return output, nil
+
+}
+
 func (s *Store) removeWaiterLocked(listName string, waiter *Waiter) {
 	waitersList := s.waiters[listName]
 	idx := -1
