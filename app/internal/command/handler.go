@@ -99,6 +99,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err)
 		}
+	case "INCR":
+		err := h.handleIncrCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err)
+		}
 
 	default:
 		WriteError(writer, errors.New("unsupported command"))
@@ -122,7 +127,7 @@ func WriteError(writer *bufio.Writer, err error) {
 }
 
 type Store interface {
-	Set(key, value string, ttl time.Duration)
+	Set(key string, value string, ttl time.Duration)
 	Get(key string) (string, bool)
 	Delete(key string) bool
 	RPushList(listName string, values []string) int
@@ -136,4 +141,5 @@ type Store interface {
 	RangeStream(streamKey string, start string, stop string) ([]storage.StreamEntry, error)
 	ReadStream(streamKey string, streamId string) (storage.StreamReadResult, error)
 	ReadStreamBlock(streamKey string, streamId string, ttl time.Duration) (storage.StreamReadResult, error)
+	Incr(key string) (uint64, error)
 }

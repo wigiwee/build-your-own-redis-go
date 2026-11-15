@@ -10,6 +10,8 @@ const OK_BULK_STR = "+OK\r\n"
 
 const TYPE_STRING = "string"
 
+const TYPE_INT = "int"
+
 const TYPE_LIST = "list"
 
 const TYPE_SET = "set"

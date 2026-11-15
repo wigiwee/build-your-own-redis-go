@@ -6,20 +6,6 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
-func (s *Store) Set(key, value string, ttl time.Duration) {
-	s.refreshKey(key)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	entry := Entry{
-		Type:  utils.TYPE_STRING,
-		Value: value,
-	}
-	if ttl > 0 {
-		entry.ExpiresAt = time.Now().Add(ttl)
-	}
-	s.data[key] = entry
-}
-
 func (s *Store) Get(key string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -34,7 +20,7 @@ func (s *Store) Get(key string) (string, bool) {
 		delete(s.data, key)
 		return "", false
 	}
-	return entry.Value, true
+	return entry.StringValue, true
 }
 
 func (s *Store) Delete(key string) bool {

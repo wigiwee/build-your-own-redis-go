@@ -12,9 +12,10 @@ import (
 type Entry struct {
 	Type string
 
-	List      []string
-	Value     string
-	ExpiresAt time.Time
+	List        []string
+	StringValue string
+	IntValue    uint64
+	ExpiresAt   time.Time
 
 	Stream *Stream
 }
@@ -52,6 +53,31 @@ func (streamEntry StreamEntry) SerializeRESP() (string, error) {
 
 func (sId *StreamID) ToString() string {
 	return strconv.FormatUint(sId.Milliseconds, 10) + "-" + strconv.FormatUint(sId.SequenceNum, 10)
+}
+
+func (s *Store) Set(key string, value string, ttl time.Duration) {
+	s.refreshKey(key)
+	s.mu.Lock()
+
+	defer s.mu.Unlock()
+	var entry Entry
+	intVal, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		entry = Entry{
+			Type:        utils.TYPE_STRING,
+			StringValue: value,
+		}
+	} else {
+		entry = Entry{
+			Type:     utils.TYPE_INT,
+			IntValue: uint64(intVal),
+		}
+	}
+	if ttl > 0 {
+		entry.ExpiresAt = time.Now().Add(ttl)
+	}
+
+	s.data[key] = entry
 }
 
 func GetStreamID(input string) (StreamID, error) {
