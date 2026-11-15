@@ -58,7 +58,13 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 			if err != nil {
 				return utils.ErrInvalidCmd
 			}
-			ttl := time.Duration(time.Duration(milliSec) * time.Millisecond)
+			var ttl time.Duration
+			if milliSec == 0 {
+				ttl = time.Duration(time.Duration(200000) * time.Hour)
+			} else {
+				ttl = time.Duration(time.Duration(milliSec) * time.Millisecond)
+			}
+
 			output, err := h.store.ReadStreamBlock(args[4], args[5], ttl)
 			if err != nil {
 				return err
