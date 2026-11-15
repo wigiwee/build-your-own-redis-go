@@ -3,7 +3,6 @@ package command
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -26,15 +25,11 @@ func (s StreamReadResponse) SerializeRESP() (string, error) {
 
 func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error {
 	if len(args) < 4 {
-		fmt.Println("1")
 		return errors.New("invalid command")
 	}
-	fmt.Println("going to the switch")
 	switch strings.ToUpper(args[1]) {
 	case "STREAMS":
-		fmt.Println("entered the switch")
 		if (len(args)-2)%2 != 0 {
-			fmt.Println("2")
 			return errors.New("invalid command")
 		}
 		trueLen := len(args) - 2
@@ -46,7 +41,6 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 			if err != nil {
 				return err
 			}
-			fmt.Println(output)
 			streamResultArr = append(streamResultArr, output)
 
 		}
@@ -54,7 +48,6 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 		if err != nil {
 			return err
 		}
-		fmt.Println()
 		writer.Write([]byte(outputStr))
 		writer.Flush()
 		return nil
@@ -85,7 +78,6 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 		}
 
 	default:
-		fmt.Println("3")
 		return errors.New("invalid command")
 	}
 	return nil

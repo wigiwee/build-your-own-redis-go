@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -64,6 +63,7 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 	for id, waiters := range entry.Waiters {
 		if streamId.IsGreaterThan(id) {
 			for _, waiter := range waiters {
+				waiter.notified = true
 				waiter.ch <- newEntry
 			}
 		}
@@ -74,7 +74,6 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 
 func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.Duration) (StreamReadResult, error) {
 	s.mu.Lock()
-	fmt.Println("at the raed stream blocks")
 
 	output := StreamReadResult{}
 	output.Key = streamKey
@@ -85,7 +84,6 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 	}
 
 	entry, exists := s.data[streamKey]
-	fmt.Println("entry doesn't exist")
 	if !exists {
 		entry = Entry{
 			Type: utils.TYPE_STREAM,
@@ -98,7 +96,6 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 	}
 
 	//checking if already present
-	fmt.Println(entry.Stream.Entries)
 	for _, streamEntry := range entry.Stream.Entries {
 		if streamEntry.ID.IsGreaterThan(streamId) {
 			output.Entries = append(output.Entries, streamEntry)
@@ -118,8 +115,6 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 
 	entry.Stream.Waiters[streamId] = append(entry.Stream.Waiters[streamId], waiter)
 	s.mu.Unlock()
-	fmt.Println(ttl)
-	fmt.Println("here to wait the timer out")
 	var null StreamReadResult
 	select {
 	case result := <-waiter.ch:
@@ -127,7 +122,6 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 		s.mu.Lock()
 		delete(s.data[streamKey].Stream.Waiters, streamId)
 		s.mu.Unlock()
-		fmt.Println("return this output, ", output)
 		return output, nil
 
 	case <-timer.C:
