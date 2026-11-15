@@ -1,5 +1,7 @@
 package utils
 
+import "errors"
+
 const CRLF = "\r\n"
 
 const NULL_BULK_STR = "$-1\r\n"
@@ -19,3 +21,9 @@ const TYPE_HASH = "has"
 const TYPE_STREAM = "stream"
 
 const TYPE_VECTORSET = "vectorset"
+
+var (
+	ErrWrongType = errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
+
+	ErrInvalidCmd = errors.New("syntax error")
+)

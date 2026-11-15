@@ -116,6 +116,7 @@ func WriteError(writer *bufio.Writer, err error) {
 
 	err = writer.Flush()
 	if err != nil {
+		log.Println("return error ", err)
 		log.Println("error writing err", err)
 	}
 }
@@ -133,5 +134,6 @@ type Store interface {
 	GetType(key string) string
 	AddStream(streamkey string, id string, args []string) (string, error)
 	RangeStream(streamKey string, start string, stop string) ([]storage.StreamEntry, error)
-	ReadStream(streamKey string, streamId string) ([]any, error)
+	ReadStream(streamKey string, streamId string) (storage.StreamReadResult, error)
+	ReadStreamBlock(streamKey string, streamId string, ttl time.Duration) (storage.StreamReadResult, error)
 }

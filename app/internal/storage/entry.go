@@ -21,6 +21,11 @@ type Entry struct {
 type Stream struct {
 	Entries []StreamEntry
 	LastID  StreamID
+	Waiters map[StreamID][]*StreamWaiters
+}
+type StreamWaiters struct {
+	ch       chan StreamEntry
+	notified bool
 }
 
 type StreamID struct {
@@ -48,6 +53,7 @@ func (streamEntry StreamEntry) SerializeRESP() (string, error) {
 func (sId *StreamID) ToString() string {
 	return strconv.FormatUint(sId.Milliseconds, 10) + "-" + strconv.FormatUint(sId.SequenceNum, 10)
 }
+
 func GetStreamID(input string) (StreamID, error) {
 	splitInput := strings.Split(input, "-")
 	output := StreamID{}
@@ -152,5 +158,11 @@ func (s *Stream) AddStreamEntry(streamEntry StreamEntry) (StreamID, error) {
 	s.LastID = s.Entries[len(s.Entries)-1].ID
 
 	return s.LastID, nil
+}
 
+func (sId *StreamID) IsGreaterThan(streamId StreamID) bool {
+	if sId.Milliseconds > streamId.Milliseconds || sId.Milliseconds == streamId.Milliseconds && sId.SequenceNum > streamId.SequenceNum {
+		return true
+	}
+	return false
 }

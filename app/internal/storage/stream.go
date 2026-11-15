@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -9,6 +10,19 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
+
+type StreamReadResult struct {
+	Key     string
+	Entries []StreamEntry
+}
+
+func (s StreamReadResult) SerializeRESP() (string, error) {
+	serStr, err := utils.Serialize([]any{s.Key, s.Entries})
+	if err != nil {
+		return "", err
+	}
+	return serStr, nil
+}
 
 func (s *Store) AddStream(streamkey string, id string, args []string) (string, error) {
 	s.mu.Lock()
@@ -25,60 +39,138 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 	if streamId.Milliseconds == 0 && streamId.SequenceNum == 0 {
 		return "", errors.New("ERR The ID specified in XADD must be greater than 0-0")
 	}
-
+	newEntry := StreamEntry{
+		ID:     streamId,
+		Fields: args,
+	}
 	if !exists {
 
 		entry := Entry{
 			Type: utils.TYPE_STREAM,
 			Stream: &Stream{
-				Entries: []StreamEntry{
-					StreamEntry{
-						ID:     streamId,
-						Fields: args,
-					},
-				},
-				LastID: streamId,
+				Entries: []StreamEntry{newEntry},
+				LastID:  streamId,
+				Waiters: make(map[StreamID][]*StreamWaiters),
 			},
 		}
 		s.data[streamkey] = entry
 	} else {
-		_, err := s.data[streamkey].Stream.AddStreamEntry(
-			StreamEntry{
-				ID:     streamId,
-				Fields: args,
-			},
-		)
+		_, err := s.data[streamkey].Stream.AddStreamEntry(newEntry)
 		if err != nil {
 			return "", err
 		}
 	}
+	entry := s.data[streamkey].Stream
+	for id, waiters := range entry.Waiters {
+		if streamId.IsGreaterThan(id) {
+			for _, waiter := range waiters {
+				waiter.ch <- newEntry
+			}
+		}
+	}
+
 	return s.data[streamkey].Stream.Entries[len(s.data[streamkey].Stream.Entries)-1].ID.ToString(), nil
+}
+
+func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.Duration) (StreamReadResult, error) {
+	s.mu.Lock()
+	fmt.Println("at the raed stream blocks")
+
+	output := StreamReadResult{}
+	output.Key = streamKey
+
+	streamId, err := GetStreamID(streamIdStr)
+	if err != nil {
+		return output, err
+	}
+
+	entry, exists := s.data[streamKey]
+	fmt.Println("entry doesn't exist")
+	if !exists {
+		entry = Entry{
+			Type: utils.TYPE_STREAM,
+			Stream: &Stream{
+				Waiters: make(map[StreamID][]*StreamWaiters, 1),
+				Entries: []StreamEntry{},
+			},
+		}
+		s.data[streamKey] = entry
+	}
+
+	//checking if already present
+	fmt.Println(entry.Stream.Entries)
+	for _, streamEntry := range entry.Stream.Entries {
+		if streamEntry.ID.IsGreaterThan(streamId) {
+			output.Entries = append(output.Entries, streamEntry)
+		}
+	}
+	if len(output.Entries) != 0 {
+		return output, nil
+	}
+
+	timer := time.NewTimer(ttl)
+	defer timer.Stop()
+
+	waiter := &StreamWaiters{
+		ch:       make(chan StreamEntry),
+		notified: false,
+	}
+
+	entry.Stream.Waiters[streamId] = append(entry.Stream.Waiters[streamId], waiter)
+	s.mu.Unlock()
+	fmt.Println(ttl)
+	fmt.Println("here to wait the timer out")
+	var null StreamReadResult
+	select {
+	case result := <-waiter.ch:
+		output.Entries = []StreamEntry{result}
+		s.mu.Lock()
+		delete(s.data[streamKey].Stream.Waiters, streamId)
+		s.mu.Unlock()
+		fmt.Println("return this output, ", output)
+		return output, nil
+
+	case <-timer.C:
+		if waiter.notified {
+			result := <-waiter.ch
+			output.Entries = []StreamEntry{result}
+			s.mu.Lock()
+			delete(s.data[streamKey].Stream.Waiters, streamId)
+			s.mu.Unlock()
+			return null, nil
+		}
+		s.mu.Lock()
+		delete(s.data[streamKey].Stream.Waiters, streamId)
+		s.mu.Unlock()
+		return null, nil
+
+	}
 
 }
 
-func (s *Store) ReadStream(streamKey string, streamId string) ([]any, error) {
+func (s *Store) ReadStream(streamKey string, streamId string) (StreamReadResult, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	outputReturn := []any{}
-	outputReturn = append(outputReturn, streamKey)
+	output := StreamReadResult{
+		Key: streamKey,
+	}
 
 	startid, err := GetStreamID(streamId)
 	if err != nil {
-		return nil, err
+		return output, err
 	}
 	startid.SequenceNum += 1
 
 	entry, exists := s.data[streamKey]
 	if !exists {
-		return nil, nil
+		return output, nil
 	}
 	streamEntries, err := entry.Stream.getEntries(startid, entry.Stream.LastID)
 	if err != nil {
-		return nil, err
+		return output, err
 	}
-	outputReturn = append(outputReturn, streamEntries)
-	return outputReturn, nil
-
+	output.Entries = streamEntries
+	return output, nil
 }
 
 func (s *Store) RangeStream(streamKey string, start string, stop string) ([]StreamEntry, error) {
