@@ -74,6 +74,9 @@ func (s *Store) AddStream(streamkey string, id string, args []string) (string, e
 
 func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.Duration) (StreamReadResult, error) {
 	s.mu.Lock()
+	if streamIdStr == "$" {
+		streamIdStr = s.data[streamKey].Stream.LastID.ToString()
+	}
 
 	output := StreamReadResult{}
 	output.Key = streamKey
