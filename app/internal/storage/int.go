@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
@@ -11,12 +10,15 @@ func (s *Store) Incr(key string) (uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	entry, exists := s.data[key]
-	fmt.Println(entry, exists)
 	if !exists {
-		return 0, errors.New("key not found")
+		s.data[key] = Entry{
+			Type:     utils.TYPE_INT,
+			IntValue: 1,
+		}
+		return 1, nil
 	}
 	if entry.Type != utils.TYPE_INT {
-		return 0, errors.New("key not found")
+		return 0, errors.New("ERR value is not an integer or out of range")
 	}
 	entry.IntValue = entry.IntValue + 1
 	s.data[key] = entry

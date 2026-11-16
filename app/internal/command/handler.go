@@ -128,7 +128,7 @@ func WriteError(writer *bufio.Writer, err error) {
 
 type Store interface {
 	Set(key string, value string, ttl time.Duration)
-	Get(key string) (string, bool)
+	Get(key string) any
 	Delete(key string) bool
 	RPushList(listName string, values []string) int
 	LPushList(listName string, values []string) int

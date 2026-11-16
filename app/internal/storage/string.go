@@ -1,26 +1,35 @@
 package storage
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
-func (s *Store) Get(key string) (string, bool) {
+func (s *Store) Get(key string) any {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	entry, exists := s.data[key]
 
 	//todo: to be revised
-	if !exists || entry.Type != utils.TYPE_STRING {
-		return "", false
+	if !exists {
+		return nil
 	}
+
 	if !entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt) {
 		delete(s.data, key)
-		return "", false
+		return nil
 	}
-	return entry.StringValue, true
+	switch entry.Type {
+	case utils.TYPE_STRING:
+		return entry.StringValue
+	case utils.TYPE_INT:
+		return strconv.FormatUint(entry.IntValue, 10)
+	default:
+		return nil
+	}
 }
 
 func (s *Store) Delete(key string) bool {
