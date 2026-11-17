@@ -21,14 +21,36 @@ func NewHandler(store Store) *Handler {
 
 func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
-	if client.InTransaction && strings.ToUpper(args[0]) != "EXEC" && strings.ToUpper(args[0]) != "DISCARD" {
+	if len(args) == 0 {
+		client.WriteResponse(errors.New("no args received"))
+	}
+
+	switch strings.ToUpper(args[0]) {
+
+	case "MULTI":
+		h.handleMultiCommand(client, args)
+		return
+
+	case "EXEC":
+		h.handleExecCommand(client, args)
+		return
+
+	case "DISCARD":
+		h.handleDiscardCommand(client, args)
+		return
+
+	}
+
+	if client.InTransaction {
 		client.QueuedCommands = append(client.QueuedCommands, args)
 		client.WriteSimpleString("QUEUED")
 		return
 	}
-	if len(args) == 0 {
-		client.WriteResponse(errors.New("no args received"))
-	}
+	h.executeCommand(client, args)
+
+}
+
+func (h *Handler) executeCommand(client *client.Client, args []string) {
 
 	switch strings.ToUpper(args[0]) {
 	case "PING":
@@ -76,20 +98,11 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 	case "INCR":
 		h.handleIncrCommand(client, args)
 
-	case "MULTI":
-		h.handleMultiCommand(client, args)
-
-	case "EXEC":
-		h.handleExecCommand(client, args)
-
-	case "DISCARD":
-		h.handleDiscardCommand(client, args)
-
+	case "WATCH":
+		h.handleWatchCommand(client,args)
 	default:
 		client.WriteResponse(errors.New("unsupported command"))
-
 	}
-
 }
 
 type Store interface {

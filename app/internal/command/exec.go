@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
@@ -19,10 +20,11 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 		client.WriteResponse(errors.New("ERR EXEC without MULTI"))
 		return
 	}
-
+	fmt.Println("i was here")
 	commands := client.QueuedCommands
 	client.QueuedCommands = nil
 	client.InTransaction = false
+
 	originalWriter := client.Writer
 
 	var byteBuffer bytes.Buffer
@@ -31,9 +33,19 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 	client.SetWriter(tempWriter)
 
 	for _, args := range commands {
-		h.HandleCommand(client, args)
+		fmt.Println("did go in loop")
+		h.executeCommand(client, args)
+	}
+	fmt.Println("Loop over")
+	if err := tempWriter.Flush(); err != nil {
+		fmt.Println("flushed and setting orignal writer")
+		client.SetWriter(originalWriter)
+		client.WriteResponse(err)
+		return
 	}
 	client.SetWriter(originalWriter)
+	fmt.Println("writing final response")
+	//why is the application not writing respose after this
 	client.WriteRaw("*" + strconv.Itoa(len(commands)) + utils.CRLF + byteBuffer.String())
 	return
 }
