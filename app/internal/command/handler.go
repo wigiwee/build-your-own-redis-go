@@ -39,6 +39,9 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 		h.handleDiscardCommand(client, args)
 		return
 
+	case "WATCH":
+		h.handleWatchCommand(client, args)
+		return
 	}
 
 	if client.InTransaction {
@@ -98,8 +101,6 @@ func (h *Handler) executeCommand(client *client.Client, args []string) {
 	case "INCR":
 		h.handleIncrCommand(client, args)
 
-	case "WATCH":
-		h.handleWatchCommand(client,args)
 	default:
 		client.WriteResponse(errors.New("unsupported command"))
 	}
