@@ -21,7 +21,7 @@ func NewHandler(store Store) *Handler {
 
 func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
-	if client.InTransaction {
+	if client.InTransaction && strings.ToUpper(args[0]) != "EXEC" {
 		client.QueuedCommands = append(client.QueuedCommands, args)
 		client.WriteSimpleString("QUEUED")
 		return
