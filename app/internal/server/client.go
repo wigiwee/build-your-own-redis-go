@@ -7,8 +7,20 @@ import (
 	"log"
 	"net"
 
+	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
+
+type Client struct {
+	Conn   net.Conn
+	Reader *bufio.Reader
+	Writer *bufio.Writer
+
+	InTransaction  bool
+	QueuedCommands [][]string
+
+	Handler *command.Handler
+}
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
@@ -26,6 +38,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			return
 		}
 		log.Println("processing command ", args)
+
 		s.Handler.HandleCommand(writer, args)
 	}
 }

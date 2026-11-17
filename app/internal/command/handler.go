@@ -104,6 +104,11 @@ func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
 		if err != nil {
 			WriteError(writer, err)
 		}
+	case "MULTI":
+		err := h.handleMultiCommand(writer, args)
+		if err != nil {
+			WriteError(writer, err)
+		}
 
 	default:
 		WriteError(writer, errors.New("unsupported command"))
