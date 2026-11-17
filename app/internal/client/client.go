@@ -15,6 +15,7 @@ type Client struct {
 
 	InTransaction  bool
 	QueuedCommands [][]string
+	WatchedKey     string
 }
 
 func NewClient(conn net.Conn) *Client {

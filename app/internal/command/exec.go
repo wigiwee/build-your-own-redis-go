@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
@@ -20,10 +21,14 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 		client.WriteResponse(errors.New("ERR EXEC without MULTI"))
 		return
 	}
-	fmt.Println("i was here")
 	commands := client.QueuedCommands
+	watchedKey := client.WatchedKey
+	client.WatchedKey = ""
 	client.QueuedCommands = nil
 	client.InTransaction = false
+
+	fmt.Println(commands)
+	fmt.Println(watchedKey)
 
 	originalWriter := client.Writer
 
@@ -33,18 +38,23 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 	client.SetWriter(tempWriter)
 
 	for _, args := range commands {
-		fmt.Println("did go in loop")
+		if watchedKey != "" {
+			if strings.ToUpper(args[0]) == "SET" && args[1] == watchedKey {
+				fmt.Println("in the condition")
+				var emptArr []string
+				client.Writer = originalWriter
+				client.WriteResponse(emptArr)
+				return
+			}
+		}
 		h.executeCommand(client, args)
 	}
-	fmt.Println("Loop over")
 	if err := tempWriter.Flush(); err != nil {
-		fmt.Println("flushed and setting orignal writer")
 		client.SetWriter(originalWriter)
 		client.WriteResponse(err)
 		return
 	}
 	client.SetWriter(originalWriter)
-	fmt.Println("writing final response")
 	//why is the application not writing respose after this
 	client.WriteRaw("*" + strconv.Itoa(len(commands)) + utils.CRLF + byteBuffer.String())
 	return

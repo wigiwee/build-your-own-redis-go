@@ -15,6 +15,7 @@ func (h *Handler) handleWatchCommand(client *client.Client, args []string) {
 		client.WriteResponse(errors.New("ERR WATCH inside MULTI is not allowed"))
 		return
 	}
+	client.WatchedKey = args[1]
 
 	client.WriteSimpleString("OK")
 }
