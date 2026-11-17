@@ -1,43 +1,33 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleLPopCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleLPopCommand(client *client.Client, args []string) {
 	if len(args) > 3 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 	n := 1
 	if len(args) != 2 {
 		var err error
 		n, err = strconv.Atoi(args[2])
 		if err != nil {
-			return err
+			client.WriteResponse(err)
+			return
 		}
 	}
 	pop := h.store.LPop(args[1], n)
 	if len(pop) == 0 {
-		writer.Write([]byte(utils.NULL_BULK_STR))
+		client.WriteResponse(nil)
 	} else if len(pop) == 1 {
-		bulkstr, err := utils.Serialize(pop[0])
-		if err != nil {
-			return err
-		}
-		writer.Write([]byte(bulkstr))
-
+		client.WriteResponse(pop[0])
 	} else {
-		respArr, err := utils.Serialize(pop)
-		if err != nil {
-			return err
-		}
-		writer.Write([]byte(respArr))
-
+		client.WriteResponse(pop)
 	}
-	writer.Flush()
-	return nil
+	return
 }

@@ -1,23 +1,23 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleXAddCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleXAddCommand(client *client.Client, args []string) {
 	if len(args) < 5 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 
 	output, err := h.store.AddStream(args[1], args[2], args[3:])
 	if err != nil {
-		return err
+		client.WriteResponse(err)
+		return
 	}
-	bulkStr, err := utils.Serialize(output)
-	writer.Write([]byte(bulkStr))
-	writer.Flush()
-	return nil
+
+	client.WriteResponse(output)
+	return
 }

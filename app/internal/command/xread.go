@@ -1,12 +1,12 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
@@ -23,14 +23,16 @@ func (s StreamReadResponse) SerializeRESP() (string, error) {
 	return str, nil
 }
 
-func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleXReadCommand(client *client.Client, args []string) {
 	if len(args) < 4 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 	switch strings.ToUpper(args[1]) {
 	case "STREAMS":
 		if (len(args)-2)%2 != 0 {
-			return errors.New("invalid command")
+			client.WriteResponse(errors.New("invalid command"))
+			return
 		}
 		trueLen := len(args) - 2
 		streamResultArr := []storage.StreamReadResult{}
@@ -39,24 +41,21 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 
 			output, err := h.store.ReadStream(args[i], args[j])
 			if err != nil {
-				return err
+				client.WriteResponse(err)
+				return
 			}
 			streamResultArr = append(streamResultArr, output)
 
 		}
-		outputStr, err := utils.Serialize(StreamReadResponse{Streams: streamResultArr})
-		if err != nil {
-			return err
-		}
-		writer.Write([]byte(outputStr))
-		writer.Flush()
-		return nil
+		client.WriteResponse(StreamReadResponse{Streams: streamResultArr})
+		return
 
 	case "BLOCK":
 		if strings.ToUpper(args[3]) == "STREAMS" {
 			milliSec, err := strconv.ParseUint(args[2], 10, 64)
 			if err != nil {
-				return utils.ErrInvalidCmd
+				client.WriteResponse(utils.ErrInvalidCmd)
+				return
 			}
 			var ttl time.Duration
 			if milliSec == 0 {
@@ -67,24 +66,25 @@ func (h *Handler) handleXReadCommand(writer *bufio.Writer, args []string) error 
 
 			output, err := h.store.ReadStreamBlock(args[4], args[5], ttl)
 			if err != nil {
-				return err
+				client.WriteResponse(err)
+				return
 			}
 			if output.Entries == nil || len(output.Entries) == 0 {
-				writer.Write([]byte("*-1\r\n"))
-				writer.Flush()
-				return nil
+				var arr []string
+				client.WriteResponse(arr)
+				return
 			}
 
-			outputStr, err := utils.Serialize(StreamReadResponse{Streams: []storage.StreamReadResult{output}})
-			writer.Write([]byte(outputStr))
-			writer.Flush()
+			client.WriteResponse(StreamReadResponse{Streams: []storage.StreamReadResult{output}})
 
 		} else {
-			return utils.ErrInvalidCmd
+			client.WriteResponse(utils.ErrInvalidCmd)
+			return
 		}
 
 	default:
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
-	return nil
+	return
 }

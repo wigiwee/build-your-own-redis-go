@@ -1,17 +1,21 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleMultiCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleMultiCommand(client *client.Client, args []string) {
 	if len(args) > 1 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
-	writer.Write([]byte(utils.OK_BULK_STR))
-	writer.Flush()
-	return nil
+	if client.InTransaction == true {
+		client.WriteResponse(errors.New("client already in exec"))
+		return
+	}
+	client.InTransaction = true
+	client.WriteSimpleString("OK")
+	return
 }

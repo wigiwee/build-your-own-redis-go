@@ -1,23 +1,18 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleTypeCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleTypeCommand(client *client.Client, args []string) {
 	if len(args) != 2 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 
 	keyType := h.store.GetType(args[1])
-	simpleStr, err := utils.SerializeString(keyType)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte(simpleStr))
-	writer.Flush()
-	return nil
+	client.WriteSimpleString(keyType)
+	return
 }

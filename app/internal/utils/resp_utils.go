@@ -73,11 +73,8 @@ func DeserializeInt(str string) (int, error) {
 	return strconv.Atoi(str[1 : len(str)-2])
 }
 
-func SerializeString(str string) (string, error) {
-	if len(str) == 0 {
-		return "", errors.New("null string passed")
-	}
-	return "+" + str + CRLF, nil
+func SerializeSimpleString(str string) string {
+	return "+" + str + CRLF
 }
 
 // todo: figure out if really needed

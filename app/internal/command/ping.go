@@ -1,23 +1,11 @@
 package command
 
 import (
-	"bufio"
-	"log"
-
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handlePingCommand(writer *bufio.Writer, args []string) error {
-	pongBulkStr, err := utils.SerializeString("PONG")
+func (h *Handler) handlePingCommand(client *client.Client, args []string) {
 
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	_, err = writer.Write([]byte(pongBulkStr))
-	if err != nil {
-		return err
-	}
-	writer.Flush()
-	return nil
+	client.WriteSimpleString("PONG")
+	return
 }

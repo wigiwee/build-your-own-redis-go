@@ -1,14 +1,12 @@
 package command
 
 import (
-	"bufio"
 	"errors"
-	"log"
 	"strings"
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
 type Handler struct {
@@ -21,114 +19,72 @@ func NewHandler(store Store) *Handler {
 	}
 }
 
-func (h *Handler) HandleCommand(writer *bufio.Writer, args []string) {
+func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
+	if client.InTransaction {
+		client.QueuedCommands = append(client.QueuedCommands, args)
+		client.WriteSimpleString("QUEUED")
+		return
+	}
 	if len(args) == 0 {
-		WriteError(writer, errors.New("no args received"))
+		client.WriteResponse(errors.New("no args received"))
 	}
 
 	switch strings.ToUpper(args[0]) {
-
 	case "PING":
-		err := h.handlePingCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handlePingCommand(client, args)
+
 	case "ECHO":
-		err := h.handleEchoCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleEchoCommand(client, args)
+
 	case "GET":
-		err := h.handleGetCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleGetCommand(client, args)
+
 	case "SET":
-		err := h.handleSetCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleSetCommand(client, args)
+
 	case "RPUSH":
-		err := h.handleRpushCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleRpushCommand(client, args)
+
 	case "LPUSH":
-		err := h.handleLpushCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleLpushCommand(client, args)
+
 	case "LRANGE":
-		err := h.handleLrangeCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleLrangeCommand(client, args)
+
 	case "LLEN":
-		err := h.handleLlenCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleLlenCommand(client, args)
+
 	case "LPOP":
-		err := h.handleLPopCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleLPopCommand(client, args)
+
 	case "BLPOP":
-		err := h.handleBLPopCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleBLPopCommand(client, args)
+
 	case "TYPE":
-		err := h.handleTypeCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleTypeCommand(client, args)
+
 	case "XADD":
-		err := h.handleXAddCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleXAddCommand(client, args)
+
 	case "XRANGE":
-		err := h.handleXRangeCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleXRangeCommand(client, args)
+
 	case "XREAD":
-		err := h.handleXReadCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleXReadCommand(client, args)
+
 	case "INCR":
-		err := h.handleIncrCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
+		h.handleIncrCommand(client, args)
+
 	case "MULTI":
-		err := h.handleMultiCommand(writer, args)
-		if err != nil {
-			WriteError(writer, err)
-		}
-
+		h.handleMultiCommand(client, args)
+	case "EXEC":
+		// h.handleExecCommand(client, args)
 	default:
-		WriteError(writer, errors.New("unsupported command"))
+		client.WriteResponse(errors.New("unsupported command"))
 
 	}
 
-}
-
-func WriteError(writer *bufio.Writer, err error) {
-	serErr, err := utils.Serialize(err)
-	_, err = writer.Write([]byte(serErr))
-	if err != nil {
-		log.Println("error writing err", err)
-	}
-
-	err = writer.Flush()
-	if err != nil {
-		log.Println("return error ", err)
-		log.Println("error writing err", err)
-	}
 }
 
 type Store interface {

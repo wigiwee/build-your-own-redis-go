@@ -1,29 +1,25 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 	"strconv"
 	"time"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleBLPopCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleBLPopCommand(client *client.Client, args []string) {
 	if len(args) != 3 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 	n, err := strconv.ParseFloat(args[2], 64)
 	if err != nil {
-		return err
+		client.WriteResponse(err)
+		return
 	}
 	ttl := time.Duration(n * float64(time.Second))
 	output := h.store.BLPop(args[1], ttl)
-	respArr, err := utils.Serialize(output)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte(respArr))
-	writer.Flush()
-	return nil
+	client.WriteResponse(output)
+	return
 }

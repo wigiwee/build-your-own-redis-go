@@ -1,26 +1,22 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleXRangeCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleXRangeCommand(client *client.Client, args []string) {
 	if len(args) < 4 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
 
 	output, err := h.store.RangeStream(args[1], args[2], args[3])
 	if err != nil {
-		return err
+		client.WriteResponse(err)
+		return
 	}
-	outputStr, err := utils.Serialize(output)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte(outputStr))
-	writer.Flush()
-	return nil
+	client.WriteResponse(output)
+	return
 }

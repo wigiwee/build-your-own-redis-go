@@ -1,22 +1,18 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleLpushCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleLpushCommand(client *client.Client, args []string) {
 	if !(len(args) > 2) {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
+
 	resInt := h.store.LPushList(args[1], args[2:])
-	serInt, err := utils.Serialize(resInt)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte(serInt))
-	writer.Flush()
-	return nil
+	client.WriteResponse(resInt)
+	return
 }

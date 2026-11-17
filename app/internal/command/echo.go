@@ -1,21 +1,16 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleEchoCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleEchoCommand(client *client.Client, args []string) {
 	if len(args) != 2 {
-		return errors.New("invalid input")
+		client.WriteResponse(errors.New("invalid input"))
+		return
 	}
-	bulkstr, err := utils.Serialize(args[1])
-	if err != nil {
-		return err
-	}
-	_, err = writer.Write([]byte(bulkstr))
-	writer.Flush()
-	return err
+	client.WriteResponse(args[1])
+	return
 }

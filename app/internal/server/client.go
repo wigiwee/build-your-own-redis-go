@@ -1,34 +1,21 @@
 package server
 
 import (
-	"bufio"
 	"errors"
 	"io"
 	"log"
 	"net"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
-
-type Client struct {
-	Conn   net.Conn
-	Reader *bufio.Reader
-	Writer *bufio.Writer
-
-	InTransaction  bool
-	QueuedCommands [][]string
-
-	Handler *command.Handler
-}
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
+	client := client.NewClient(conn)
+
 	for {
-		args, err := utils.DeserializeArray(reader)
+		args, err := client.ReadCommand()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				log.Println("error reading from client, connection closed")
@@ -39,6 +26,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 		log.Println("processing command ", args)
 
-		s.Handler.HandleCommand(writer, args)
+		s.Handler.HandleCommand(client, args)
 	}
 }

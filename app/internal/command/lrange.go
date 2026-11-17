@@ -1,32 +1,30 @@
 package command
 
 import (
-	"bufio"
 	"errors"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 )
 
-func (h *Handler) handleLrangeCommand(writer *bufio.Writer, args []string) error {
+func (h *Handler) handleLrangeCommand(client *client.Client, args []string) {
 	if len(args) != 4 {
-		return errors.New("invalid command")
+		client.WriteResponse(errors.New("invalid command"))
+		return
 	}
+
 	start, err := strconv.Atoi(args[2])
 	if err != nil {
-		return err
+		client.WriteResponse(err)
+		return
 	}
 	stop, err := strconv.Atoi(args[3])
 	if err != nil {
-		return err
+		client.WriteResponse(err)
+		return
 	}
 	resArr := h.store.GetListRange(args[1], start, stop)
 
-	resArrStr, err := utils.Serialize(resArr)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte(resArrStr))
-	writer.Flush()
-	return nil
+	client.WriteResponse(resArr)
+	return
 }
