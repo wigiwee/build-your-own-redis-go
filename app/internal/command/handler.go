@@ -79,7 +79,7 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 	case "MULTI":
 		h.handleMultiCommand(client, args)
 	case "EXEC":
-		// h.handleExecCommand(client, args)
+		h.handleExecCommand(client, args)
 	default:
 		client.WriteResponse(errors.New("unsupported command"))
 

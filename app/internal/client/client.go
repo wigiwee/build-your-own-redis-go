@@ -57,3 +57,18 @@ func (c *Client) WriteSimpleString(str string) {
 		log.Println("error writing to the client ", err)
 	}
 }
+
+func (c *Client) SetWriter(writer *bufio.Writer) {
+	c.Writer = writer
+}
+
+func (c *Client) WriteRaw(str string) {
+	_, err := c.Writer.Write([]byte(str))
+	if err != nil {
+		log.Println("error writing to the client ", err)
+	}
+	err = c.Writer.Flush()
+	if err != nil {
+		log.Println("error writing to the client ", err)
+	}
+}
