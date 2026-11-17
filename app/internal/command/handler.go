@@ -21,7 +21,7 @@ func NewHandler(store Store) *Handler {
 
 func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
-	if client.InTransaction && (strings.ToUpper(args[0]) != "EXEC" || strings.ToUpper(args[0]) != "DISCARD") {
+	if client.InTransaction && strings.ToUpper(args[0]) != "EXEC" && strings.ToUpper(args[0]) != "DISCARD" {
 		client.QueuedCommands = append(client.QueuedCommands, args)
 		client.WriteSimpleString("QUEUED")
 		return
@@ -83,8 +83,8 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 		h.handleExecCommand(client, args)
 
 	case "DISCARD":
-		h.handleDiscardCommand(client,args)
-		
+		h.handleDiscardCommand(client, args)
+
 	default:
 		client.WriteResponse(errors.New("unsupported command"))
 
