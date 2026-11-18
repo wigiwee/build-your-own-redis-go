@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -23,7 +22,6 @@ func main() {
 	port := flag.Int("port", 6379, "Redis server port")
 	flag.Parse()
 
-	fmt.Println(*port)
 	store := storage.NewStore()
 	handler := command.NewHandler(store)
 	srv := server.NewServer(*handler)
