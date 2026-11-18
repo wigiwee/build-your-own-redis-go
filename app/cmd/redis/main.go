@@ -28,7 +28,8 @@ func main() {
 	serverConfig.Port = *port
 	if *masterAddr == "" {
 		serverConfig.ReplicationConfig.Role = "master"
-		// serverConfig.ReplicationConfig
+		serverConfig.ReplicationConfig.Master_replid = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+		serverConfig.ReplicationConfig.Master_repl_offset = 0
 	} else {
 		serverConfig.ReplicationConfig.Role = "slave"
 	}
