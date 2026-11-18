@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) handleWatchCommand(client *client.Client, args []string) {
-	if len(args) != 2 {
+	if len(args) < 2 {
 		client.WriteResponse("Invalid command")
 		return
 	}
