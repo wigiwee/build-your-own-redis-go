@@ -6,16 +6,19 @@ import (
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
 )
 
 type Handler struct {
-	store Store
+	store  Store
+	config config.ServerConfig
 }
 
-func NewHandler(store Store) *Handler {
+func NewHandler(store Store, config config.ServerConfig) *Handler {
 	return &Handler{
-		store: store,
+		store:  store,
+		config: config,
 	}
 }
 
@@ -45,6 +48,10 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
 	case "UNWATCH":
 		h.handleUnwatchCommand(client, args)
+		return
+
+	case "INFO":
+		h.handleInfoCommand(client, args)
 		return
 	}
 

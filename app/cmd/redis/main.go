@@ -5,9 +5,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/server"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
 )
@@ -23,10 +23,18 @@ func main() {
 	flag.Parse()
 
 	store := storage.NewStore()
-	handler := command.NewHandler(store)
+	handler := command.NewHandler(store, config.ServerConfig{
+		Port:        *port,
+		Version:     "0.1.0",
+		Mode:        "standalone",
+		BindAddress: "127.0.0.1",
+		ReplicationConfig: config.ReplicationConfig{
+			Role: "master",
+		},
+	})
 	srv := server.NewServer(*handler)
 
-	if err := srv.Start(":" + strconv.Itoa(*port)); err != nil {
+	if err := srv.Start(*port); err != nil {
 		log.Fatal(err)
 	}
 }

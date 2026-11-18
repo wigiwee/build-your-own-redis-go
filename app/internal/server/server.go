@@ -2,6 +2,7 @@ package server
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 )
@@ -16,9 +17,9 @@ func NewServer(handler command.Handler) Server {
 	}
 }
 
-func (s *Server) Start(addr string) error {
+func (s *Server) Start(port int) error {
 
-	listener, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		return err
 	}
