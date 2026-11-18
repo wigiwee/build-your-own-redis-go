@@ -18,20 +18,23 @@ var _ = os.Exit
 
 func main() {
 
+	serverConfig := config.ServerConfig{}
 	//reading cmd args
 	port := flag.Int("port", 6379, "Redis server port")
+	masterAddr := flag.String("replicaof", "", "Redis server role")
+
 	flag.Parse()
 
+	serverConfig.Port = *port
+	if *masterAddr == "" {
+		serverConfig.ReplicationConfig.Role = "master"
+		// serverConfig.ReplicationConfig
+	} else {
+		serverConfig.ReplicationConfig.Role = "slave"
+	}
+
 	store := storage.NewStore()
-	handler := command.NewHandler(store, config.ServerConfig{
-		Port:        *port,
-		Version:     "0.1.0",
-		Mode:        "standalone",
-		BindAddress: "127.0.0.1",
-		ReplicationConfig: config.ReplicationConfig{
-			Role: "master",
-		},
-	})
+	handler := command.NewHandler(store, serverConfig)
 	srv := server.NewServer(*handler)
 
 	if err := srv.Start(*port); err != nil {
