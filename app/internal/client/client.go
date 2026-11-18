@@ -14,8 +14,8 @@ type Client struct {
 	Writer *bufio.Writer
 
 	InTransaction  bool
+	WatchedKeys    map[string]uint64
 	QueuedCommands [][]string
-	WatchedKey     string
 }
 
 func NewClient(conn net.Conn) *Client {
@@ -24,6 +24,7 @@ func NewClient(conn net.Conn) *Client {
 		Reader:         bufio.NewReader(conn),
 		Writer:         bufio.NewWriter(conn),
 		InTransaction:  false,
+		WatchedKeys:    make(map[string]uint64),
 		QueuedCommands: make([][]string, 0),
 	}
 }

@@ -22,5 +22,6 @@ func (s *Store) Incr(key string) (uint64, error) {
 	}
 	entry.IntValue = entry.IntValue + 1
 	s.data[key] = entry
+	s.versions[key]++
 	return entry.IntValue, nil
 }

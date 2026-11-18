@@ -39,6 +39,7 @@ func (s *Store) Delete(key string) bool {
 	if _, exists := s.data[key]; !exists {
 		return false
 	}
+	s.versions[key]++
 	delete(s.data, key)
 	return true
 }

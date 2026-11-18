@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/client"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
@@ -22,13 +20,8 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 		return
 	}
 	commands := client.QueuedCommands
-	watchedKey := client.WatchedKey
-	client.WatchedKey = ""
 	client.QueuedCommands = nil
 	client.InTransaction = false
-
-	fmt.Println(commands)
-	fmt.Println(watchedKey)
 
 	originalWriter := client.Writer
 
@@ -37,25 +30,27 @@ func (h *Handler) handleExecCommand(client *client.Client, args []string) {
 
 	client.SetWriter(tempWriter)
 
-	for _, args := range commands {
-		if watchedKey != "" {
-			if strings.ToUpper(args[0]) == "SET" && args[1] == watchedKey {
-				fmt.Println("in the condition")
-				var emptArr []string
-				client.Writer = originalWriter
-				client.WriteResponse(emptArr)
-				return
-			}
+	for key, watchedVersion := range client.WatchedKeys {
+		currentVersion := h.store.GetVersion(key)
+		if watchedVersion != currentVersion {
+			client.WatchedKeys = make(map[string]uint64)
+			var nilArr []string
+			client.SetWriter(originalWriter)
+			client.WriteResponse(nilArr)
+			return
 		}
+	}
+	for _, args := range commands {
 		h.executeCommand(client, args)
 	}
+
 	if err := tempWriter.Flush(); err != nil {
 		client.SetWriter(originalWriter)
 		client.WriteResponse(err)
 		return
 	}
+
 	client.SetWriter(originalWriter)
-	//why is the application not writing respose after this
 	client.WriteRaw("*" + strconv.Itoa(len(commands)) + utils.CRLF + byteBuffer.String())
 	return
 }

@@ -122,4 +122,5 @@ type Store interface {
 	ReadStream(streamKey string, streamId string) (storage.StreamReadResult, error)
 	ReadStreamBlock(streamKey string, streamId string, ttl time.Duration) (storage.StreamReadResult, error)
 	Incr(key string) (uint64, error)
+	GetVersion(key string) uint64
 }

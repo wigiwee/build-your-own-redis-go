@@ -76,7 +76,7 @@ func (s *Store) Set(key string, value string, ttl time.Duration) {
 	if ttl > 0 {
 		entry.ExpiresAt = time.Now().Add(ttl)
 	}
-
+	s.versions[key]++
 	s.data[key] = entry
 }
 

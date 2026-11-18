@@ -6,9 +6,10 @@ import (
 )
 
 type Store struct {
-	mu      sync.RWMutex
-	data    map[string]Entry
-	waiters map[string][]*Waiter
+	mu       sync.RWMutex
+	data     map[string]Entry
+	waiters  map[string][]*Waiter
+	versions map[string]uint64
 }
 
 type Waiter struct {
@@ -18,11 +19,18 @@ type Waiter struct {
 
 func NewStore() *Store {
 	s := &Store{
-		data:    make(map[string]Entry),
-		waiters: make(map[string][]*Waiter),
+		data:     make(map[string]Entry),
+		waiters:  make(map[string][]*Waiter),
+		versions: make(map[string]uint64),
 	}
 	return s
+}
 
+func (s *Store) GetVersion(key string) uint64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.versions[key]
 }
 
 func (s *Store) GetType(key string) string {
