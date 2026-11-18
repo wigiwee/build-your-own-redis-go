@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -41,6 +42,11 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
 	case "WATCH":
 		h.handleWatchCommand(client, args)
+		return
+
+	case "UNWATCH":
+		fmt.Println("handling unwatch cmd")
+		h.handleUnwatchCommand(client, args)
 		return
 	}
 

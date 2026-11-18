@@ -21,3 +21,9 @@ func (h *Handler) handleWatchCommand(client *client.Client, args []string) {
 	}
 	client.WriteSimpleString("OK")
 }
+
+func (h *Handler) handleUnwatchCommand(client *client.Client, args []string) {
+
+	client.WatchedKeys = make(map[string]uint64)
+	client.WriteSimpleString("OK")
+}
