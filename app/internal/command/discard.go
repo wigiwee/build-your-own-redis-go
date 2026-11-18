@@ -20,6 +20,7 @@ func (h *Handler) handleDiscardCommand(client *client.Client, args []string) {
 
 	client.InTransaction = false
 	client.QueuedCommands = nil
+	client.WatchedKeys = make(map[string]uint64)
 	client.WriteSimpleString("OK")
 	return
 }
