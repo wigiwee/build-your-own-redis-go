@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
@@ -41,6 +42,7 @@ func main() {
 		}
 		// reader := bufio.NewReader(conn)
 		writer := bufio.NewWriter(conn)
+		reader := bufio.NewReader(conn)
 
 		pingStr, err := utils.Serialize([]string{"PING"})
 		if err != nil {
@@ -48,6 +50,23 @@ func main() {
 		}
 		writer.Write([]byte(pingStr))
 		writer.Flush()
+		log.Println(reader.ReadLine())
+
+		replconfStr, err := utils.Serialize([]string{"REPLCONF", "listening-port", strconv.Itoa(serverConfig.Port)})
+		if err != nil {
+			log.Println(err)
+		}
+		writer.Write([]byte(replconfStr))
+		writer.Flush()
+		log.Println(reader.ReadLine())
+
+		replconfStr, err = utils.Serialize([]string{"REPLCONF", "capa", "psync2"})
+		if err != nil {
+			log.Println(err)
+		}
+		writer.Write([]byte(replconfStr))
+		writer.Flush()
+		log.Println(reader.ReadLine())
 
 	}
 	store := storage.NewStore()
