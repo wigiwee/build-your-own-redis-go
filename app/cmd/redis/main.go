@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -35,7 +34,6 @@ func main() {
 		split := strings.Split(*masterAddr, " ")
 		serverConfig.ReplicationConfig.Master_host = split[0]
 		serverConfig.ReplicationConfig.Master_port = split[1]
-		fmt.Println(split)
 		conn, err := net.Dial("tcp", ":"+serverConfig.ReplicationConfig.Master_port)
 		if err != nil {
 			log.Println("error dialing error", err)

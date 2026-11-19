@@ -54,6 +54,15 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 	case "INFO":
 		h.handleInfoCommand(client, args)
 		return
+
+	case "REPLCONF":
+		h.handleReplConfCommand(client, args)
+		return
+
+	case "PSYNC":
+		h.handlePsyncCommand(client, args)
+		return
+
 	}
 
 	if client.InTransaction {
