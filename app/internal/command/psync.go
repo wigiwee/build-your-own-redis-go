@@ -6,5 +6,5 @@ import (
 
 func (h *Handler) handlePsyncCommand(client *client.Client, args []string) {
 
-	client.WriteSimpleString("FULLRSYNC " + h.config.ReplicationConfig.Master_replid + " 0")
+	client.WriteSimpleString("FULLRESYNC " + h.config.ReplicationConfig.Master_replid + " 0")
 }
