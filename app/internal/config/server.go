@@ -19,4 +19,6 @@ type ReplicationConfig struct {
 	Repl_backlog_size              int
 	Repl_backlog_first_byte_offset int
 	Repl_backlog_histlen           int
+	Master_host                    string
+	Master_port                    string
 }

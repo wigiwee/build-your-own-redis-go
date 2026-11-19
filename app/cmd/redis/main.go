@@ -3,18 +3,13 @@ package main
 import (
 	"flag"
 	"log"
-	"net"
-	"os"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/server"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
 )
-
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
 
 func main() {
 
@@ -32,8 +27,11 @@ func main() {
 		serverConfig.ReplicationConfig.Master_repl_offset = 0
 	} else {
 		serverConfig.ReplicationConfig.Role = "slave"
-	}
+		split := strings.Split(*masterAddr, "")
+		serverConfig.ReplicationConfig.Master_host = split[0]
+		serverConfig.ReplicationConfig.Master_port = split[1]
 
+	}
 	store := storage.NewStore()
 	handler := command.NewHandler(store, serverConfig)
 	srv := server.NewServer(*handler)
