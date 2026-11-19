@@ -68,6 +68,14 @@ func main() {
 		writer.Flush()
 		log.Println(reader.ReadLine())
 
+		replconfStr, err = utils.Serialize([]string{"PSYNC", "?", "-1"})
+		if err != nil {
+			log.Println(err)
+		}
+		writer.Write([]byte(replconfStr))
+		writer.Flush()
+		log.Println(reader.ReadLine())
+
 	}
 	store := storage.NewStore()
 	handler := command.NewHandler(store, serverConfig)
