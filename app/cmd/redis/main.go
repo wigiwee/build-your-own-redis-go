@@ -74,6 +74,8 @@ func main() {
 		writer.Flush()
 		log.Println(reader.ReadLine())
 
+		log.Println(reader.ReadLine())
+
 	}
 	store := storage.NewStore()
 	handler := command.NewHandler(store, serverConfig)
