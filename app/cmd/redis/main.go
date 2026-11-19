@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"log"
+	"net"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/internal/command"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/config"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/server"
 	"github.com/codecrafters-io/redis-starter-go/app/internal/storage"
+	"github.com/codecrafters-io/redis-starter-go/app/internal/utils"
 )
 
 func main() {
@@ -27,9 +31,23 @@ func main() {
 		serverConfig.ReplicationConfig.Master_repl_offset = 0
 	} else {
 		serverConfig.ReplicationConfig.Role = "slave"
-		split := strings.Split(*masterAddr, "")
+		split := strings.Split(*masterAddr, " ")
 		serverConfig.ReplicationConfig.Master_host = split[0]
 		serverConfig.ReplicationConfig.Master_port = split[1]
+		fmt.Println(split)
+		conn, err := net.Dial("tcp", ":"+serverConfig.ReplicationConfig.Master_port)
+		if err != nil {
+			log.Println("error dialing error", err)
+		}
+		// reader := bufio.NewReader(conn)
+		writer := bufio.NewWriter(conn)
+
+		pingStr, err := utils.Serialize([]string{"PING"})
+		if err != nil {
+			log.Println("error serializing", err)
+		}
+		writer.Write([]byte(pingStr))
+		writer.Flush()
 
 	}
 	store := storage.NewStore()

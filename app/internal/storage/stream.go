@@ -83,6 +83,7 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 
 	streamId, err := GetStreamID(streamIdStr)
 	if err != nil {
+		s.mu.Unlock()
 		return output, err
 	}
 
@@ -105,6 +106,7 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 		}
 	}
 	if len(output.Entries) != 0 {
+		s.mu.Unlock()
 		return output, nil
 	}
 
@@ -134,7 +136,7 @@ func (s *Store) ReadStreamBlock(streamKey string, streamIdStr string, ttl time.D
 			s.mu.Lock()
 			delete(s.data[streamKey].Stream.Waiters, streamId)
 			s.mu.Unlock()
-			return null, nil
+			return output, nil
 		}
 		s.mu.Lock()
 		delete(s.data[streamKey].Stream.Waiters, streamId)

@@ -8,7 +8,10 @@ import (
 )
 
 func (h *Handler) handleInfoCommand(client *client.Client, args []string) {
-
+	if len(args) == 1 {
+		client.WriteResponse("port:" + strconv.Itoa(h.config.Port))
+		return
+	}
 	switch strings.ToUpper(args[1]) {
 	case "REPLICATION":
 		var sb strings.Builder

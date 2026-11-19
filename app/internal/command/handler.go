@@ -26,6 +26,7 @@ func (h *Handler) HandleCommand(client *client.Client, args []string) {
 
 	if len(args) == 0 {
 		client.WriteResponse(errors.New("no args received"))
+		return
 	}
 
 	switch strings.ToUpper(args[0]) {

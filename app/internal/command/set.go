@@ -15,7 +15,7 @@ func (h *Handler) handleSetCommand(client *client.Client, args []string) {
 		return
 	}
 	ttl := 0 * time.Millisecond
-	if len(args) > 3 {
+	if len(args) > 4 {
 		expValue, err := strconv.Atoi(args[4])
 		if err != nil {
 			client.WriteResponse(err)
